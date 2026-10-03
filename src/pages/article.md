@@ -1,5 +1,11 @@
 ---
 layout: "kb.njk"
+kicker: "Reference"
+status: "Living reference · Image, 3D and video metadata"
+scope: "How descriptions and rights travel with media files, from alt text to XMP, glTF and video posters."
+markdownUrl: "/docs/alt-xmp-favicons.md"
+sourceUrl: "https://github.com/persephonepunch/game11ty/blob/main/src/pages/article.md"
+pdfUrl: "/docs/gamestreaming-xmpdata.pdf"
 permalink: "/article/"
 title: "ALT, XMP and Favicons: Image Metadata for Rights and Media Management"
 description: "How alt text, embedded XMP and favicons carry descriptions and rights for search engines, DAMs and AI models, with JPG, PNG, WebP, glTF and Draco examples."
@@ -382,17 +388,17 @@ Draco only compresses geometry, so the mesh data shrinks and the textures and th
 
 ## Checklist for agencies and media teams
 
-- ☐ Keep one description per image in a single source file, and generate the `alt`, XMP and JSON-LD from it
-- ☐ Write alt text that adds to the section's heading instead of repeating it
-- ☐ Give the page one H1 and each section an `id` plus a heading that reads on its own
-- ☐ Embed Copyright Notice, Creator, Credit Line, Web Statement of Rights, Licensor URL and a Data Mining value
-- ☐ Point the Web Statement of Rights and the JSON-LD `license` at the same live rights page
-- ☐ Set `og:image:alt` for every share image, and fill the alt-text field in ad tools
-- ☐ Write email alt text that works as copy when images are blocked; give tracking pixels `alt=""`
-- ☐ Turn on metadata keeping in every encoder and optimiser (e.g. `cwebp -metadata xmp`)
-- ☐ Strip edit history and padding from web copies; keep the full packet in the DAM
-- ☐ Serve favicons as PNG and ICO from a 512 px source, with no third-party logos
-- ☐ Re-check the live site with a parser after every build or sync
+- <input type="checkbox" disabled> Keep one description per image in a single source file, and generate the `alt`, XMP and JSON-LD from it
+- <input type="checkbox" disabled> Write alt text that adds to the section's heading instead of repeating it
+- <input type="checkbox" disabled> Give the page one H1 and each section an `id` plus a heading that reads on its own
+- <input type="checkbox" disabled> Embed Copyright Notice, Creator, Credit Line, Web Statement of Rights, Licensor URL and a Data Mining value
+- <input type="checkbox" disabled> Point the Web Statement of Rights and the JSON-LD `license` at the same live rights page
+- <input type="checkbox" disabled> Set `og:image:alt` for every share image, and fill the alt-text field in ad tools
+- <input type="checkbox" disabled> Write email alt text that works as copy when images are blocked; give tracking pixels `alt=""`
+- <input type="checkbox" disabled> Turn on metadata keeping in every encoder and optimiser (e.g. `cwebp -metadata xmp`)
+- <input type="checkbox" disabled> Strip edit history and padding from web copies; keep the full packet in the DAM
+- <input type="checkbox" disabled> Serve favicons as PNG and ICO from a 512 px source, with no third-party logos
+- <input type="checkbox" disabled> Re-check the live site with a parser after every build or sync
 
 ### exiftool commands
 
