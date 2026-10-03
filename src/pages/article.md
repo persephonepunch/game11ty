@@ -460,6 +460,88 @@ Cloudflare's [`HTMLRewriter`](https://developers.cloudflare.com/workers/examples
 
 This part of the spec isn't built or checked against the CRM Sync code yet; it describes where the check should sit.
 
+## Connected devices: the machine plane
+
+A connected product, such as a household thermometer or a printer's ink monitor, adds a fourth plane to the client, server and commerce planes: **the machine**, with its own network identity. Commerce, theme and server security don't protect it, and it can't protect them. Like section 8, this is a plan for CRM Sync; the parser below is the working reference.
+
+| Plane | Where it runs | Who controls it | What protects it |
+| --- | --- | --- | --- |
+| Client (theme) | The shopper's browser | Anyone; it's fully public | Nothing it does is trusted. Look only, no secrets |
+| Commerce | Shopify | Shopify | Shopify's own security; Functions in their WebAssembly sandbox |
+| Server | Cloudflare Worker + Xano | You | Allow list, TLS, field encryption, release scan, edge head function |
+| Machine | The device, in someone's home, on their network | You ship the code; the owner holds the hardware | Memory-safe firmware, secure boot, signed updates, a unique identity per device |
+
+In plain words: after a device ships, you can't see or reach the hardware. Anyone can open it, read its memory or send messages pretending to be it. So the server treats every reading as untrusted input, exactly like an uploaded file.
+
+### What Shopify covers, and what's additional
+
+| Feature | Built into Shopify? | What you add |
+| --- | --- | --- |
+| Shopify Functions (discounts, shipping, payment, checkout validation) | Yes: WebAssembly, with Rust as a first-class language ([Shopify](https://shopify.dev/docs/apps/build/functions/programming-languages)) | Nothing. But a Function only sees the cart data Shopify sends it (at most 128 kB); it can't receive a file or run on a device |
+| 3D product media | Partly: GLB and USDZ only, converted and optimized by Shopify above 15 MB ([Shopify Help](https://help.shopify.com/en/manual/products/product-media/product-media-types)) | A scan before upload, and the rights record kept in Xano, because a re-encode can drop embedded metadata |
+| Mechanical 3D / CAD (STEP, IGES, STL, 3MF) | No | Your own pipeline: Worker, a sandboxed parser, Xano; a converted GLB for display |
+| Machine firmware | No; Shopify can sell it, never run or check it | Device code, signing, secure boot, updates, entitlement-gated delivery |
+
+### What a connected device needs
+
+1. **On the device:** firmware in Rust `no_std` (no operating system, no heap), with the chip's memory protection unit; secure boot so it only runs signed firmware; signed over-the-air updates.
+2. **A unique identity per device:** never a shared key or default password. Cloudflare's mutual TLS checks a client certificate per device, built for hardware that can't sign in like a person ([Cloudflare](https://developers.cloudflare.com/api-shield/security/mtls/)). One stolen device can be revoked without touching the rest.
+3. **At the Worker:** check every reading against a schema, reject values outside physical range, rate-limit and allow-list devices. A reading is a file.
+4. **In Xano:** readings stored with sensitive fields encrypted; owner, consent and entitlement joined through Addons.
+5. **In commerce:** the device never holds Shopify keys. It reports; the server decides.
+
+**Example: an ink monitor that reorders.**
+
+```
+Printer ──mTLS──▶ Worker ──▶ Xano ──▶ rule ──▶ Shopify
+ "ink 8%"       checks cert,   stores     ink < 10%,       order created
+ (signed)       schema, range  reading    owner consented,  by the server
+                               and owner  under spend cap
+```
+
+If the printer is compromised, the worst it can do is send a false low-ink reading; the order still needs the owner's consent and stays under the spending cap they set. The device triggers, the server authorizes, the person sets the limits. A **household thermometer** adds privacy: room temperatures over time can show when a home is occupied, so treat them as personal data, collect only what the feature needs, and encrypt them at rest.
+
+### Memory safety on real hardware
+
+On a microcontroller, Rust's safety comes mostly from the compiler, at no run-time cost: ownership and borrowing stop use-after-free and data races; bounds-checked reads (`slice.get()`) return "nothing" instead of memory past the end; checked arithmetic stops size calculations from wrapping on 32-bit chips. Hardware registers are modelled as values that can be taken only once, `unsafe` is confined to a small hardware-access layer, and a panic halts or resets the device instead of running corrupted. Underneath, the chip's memory protection unit and a stack-overflow guard add hardware enforcement.
+
+The reference implementation is a `no_std` parser for the GLB format, in [`firmware/glb-parse`](https://github.com/persephonepunch/game11ty/tree/main/firmware/glb-parse). It has no `unsafe` code and borrows its result from the input, with no copy or allocation:
+
+```rust
+#![cfg_attr(not(test), no_std)]   // no operating system, no heap
+
+pub fn glb_json(data: &[u8]) -> Result<&[u8], GlbError> {
+    if data.get(0..4) != Some(b"glTF") { return Err(GlbError::NotGlb); }
+    if u32_at(data, 8)? as usize != data.len() { return Err(GlbError::LengthLie); }
+    let len = u32_at(data, 12)? as usize;
+    if data.get(16..20) != Some(b"JSON") { return Err(GlbError::NotGlb); }
+    let end = 20usize.checked_add(len).ok_or(GlbError::LengthLie)?; // can't wrap around
+    data.get(20..end).ok_or(GlbError::LengthLie)                    // can't read past the end
+}
+```
+
+| Test | What a typical C parser risks | Result |
+| --- | --- | --- |
+| Valid file | — | JSON returned |
+| Program bytes (`MZ`) instead of a model | Parsed as a model | `NotGlb` |
+| Empty input | Reads uninitialised memory | `NotGlb` |
+| Header cut off | Reads past the end | `Truncated` |
+| Header lies about total size | Trusts the lie | `LengthLie` |
+| First chunk isn't JSON | Parses binary as JSON | `NotGlb` |
+| Chunk claims one byte more than exists | Buffer overflow | `LengthLie` |
+| Chunk length `0xFFFFFFFF` | `20 + len` wraps to 19 on a 32-bit chip and passes the check | `LengthLie` |
+
+CI runs the 8 tests and a mutation check (5 of 5 mutants killed), then builds the same code for two targets: `thumbv7em-none-eabihf`, an Arm Cortex-M4/M7 microcontroller, and `wasm32-unknown-unknown`, for a Worker checking uploads. One codebase guards the device and the edge. Tools cover what the compiler can't: Miri finds undefined behaviour in `unsafe` code, Kani proves properties for every input, `cargo-fuzz` throws millions of mutated files at a parser, and `cargo-geiger` counts `unsafe` code in dependencies.
+
+The limits: registers and C libraries still need `unsafe`, which Rust shrinks but doesn't remove; logic bugs and timing side channels aren't memory bugs; a C decoder linked into Rust keeps C's risks.
+
+### The law now covers these devices
+
+- **EU Cyber Resilience Act:** since 11 September 2026, manufacturers must report actively exploited vulnerabilities and severe incidents, with an early warning within 24 hours and a full notification within 72. The full security requirements, CE marking and conformity assessment apply from 11 December 2027. Consumer IoT is in scope ([European Commission](https://digital-strategy.ec.europa.eu/en/policies/cra-reporting)).
+- **UK product security regime (PSTI):** in force since 29 April 2024. Universal default and easily guessed passwords are banned, and smart thermostats and appliances are named as covered products; manufacturers, importers and retailers share the duties ([GOV.UK](https://www.gov.uk/guidance/regulations-consumer-connectable-product-security)).
+
+Selling a connected thermometer or printer into the EU or UK makes device security a legal obligation, whether it's sold through Shopify or not.
+
 ## Rights metadata as lightweight DRM
 
 XMP rights fields don't lock an image; they declare who owns it and on what terms, in a form machines act on. Real DRM encrypts content. Rights metadata is closer to a label that travels with the file: it can be stripped, but a crawler, DAM or training pipeline that respects it can read the terms without a human.
@@ -740,5 +822,6 @@ exiftool -overwrite_original -XMP-xmpMM:all= photo.jpg
 - [RFC 9309: Robots Exclusion Protocol](https://www.rfc-editor.org/rfc/rfc9309), [RFC 9116: security.txt](https://www.rfc-editor.org/rfc/rfc9116), [llmstxt.org](https://llmstxt.org/) and [Google: qualify outbound links](https://developers.google.com/search/docs/crawling-indexing/qualify-outbound-links)
 - [Helmet](https://helmetjs.github.io/), [Cloudflare Workers: set security headers](https://developers.cloudflare.com/workers/examples/security-headers/) and [Cloudflare community: Shopify and the Cloudflare proxy](https://community.cloudflare.com/t/your-domain-has-a-cloudflare-proxy-which-is-not-supported-by-shopify/693008)
 - [Hacktron: Hacking OpenAI](https://www.hacktron.ai/blog/hacking-openai)
+- [Cloudflare: mutual TLS](https://developers.cloudflare.com/api-shield/security/mtls/), [European Commission: CRA reporting](https://digital-strategy.ec.europa.eu/en/policies/cra-reporting), [GOV.UK: consumer connectable product security](https://www.gov.uk/guidance/regulations-consumer-connectable-product-security), [Shopify: Functions languages](https://shopify.dev/docs/apps/build/functions/programming-languages) and [Shopify Help: product media types](https://help.shopify.com/en/manual/products/product-media/product-media-types)
 - [How to export Cinema 4D to GLB](https://svilenkovic.com/3d/how-to-export-cinema4d-to-glb)
 - Measurements and parser output: game11ty files, the [live site](https://persephonepunch.github.io/game11ty/) and the CLO jacket and avatar GLBs, 3 October 2026

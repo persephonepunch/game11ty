@@ -50,8 +50,23 @@ jobs:
       - run: node --test
       - run: node mutate.mjs
 
+  firmware-tests:
+    # SB-19: the no_std parser (no OS, no heap), tested on the host with a
+    # mutation check, then built for a Cortex-M chip and for WebAssembly.
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: firmware/glb-parse
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup target add thumbv7em-none-eabihf wasm32-unknown-unknown
+      - run: cargo test
+      - run: python3 mutate.py
+      - run: cargo build --release --target thumbv7em-none-eabihf
+      - run: cargo build --release --target wasm32-unknown-unknown
+
   build:
-    needs: [scan, worker-tests]
+    needs: [scan, worker-tests, firmware-tests]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
