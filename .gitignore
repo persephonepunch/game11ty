@@ -3,3 +3,5 @@ _site/
 .venv/
 __pycache__/
 .DS_Store
+scan-report.json
+report/scan-report.json

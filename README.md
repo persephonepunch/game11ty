@@ -60,3 +60,19 @@ sync.py regenerates the templates from Webflow, so the additions on top live
 in `postsync.py`, driven by `src/_data/images.json` (alt text per image) and
 `site.json` -> `rights`. Run it after every sync. Edit alt text in
 images.json, not in the templates. Needs `exiftool` and Pillow.
+
+## Release scan
+
+`scripts/asset_scan.py` gates every deploy. CI runs it in a container with no
+network and no secrets, and the build only starts if it passes:
+
+- every file: real type (magic bytes) matches the extension; no executables
+- JPG/PNG/WebP: valid container, rights XMP (WebStatement, alt text) present
+- SVG: well-formed; no script, on* handlers, javascript: links,
+  foreignObject or external references
+- glTF/GLB: header, chunks, bufferViews and accessors in bounds;
+  `asset.copyright` set and not an exporter's default
+- PDF: no JavaScript, auto-run or launch actions
+
+Run it locally with `python3 scripts/asset_scan.py src`. The deployed site
+also carries `asset-manifest.json`, a SHA-256 hash of every published file.

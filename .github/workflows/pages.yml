@@ -3,19 +3,36 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  scan:
+    # Release gate: every asset is scanned in a throwaway container with no
+    # network and no secrets, so a hostile file has nothing to reach.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan assets (isolated, no network)
+        run: |
+          docker run --rm --network none --read-only --tmpfs /tmp \
+            -v "$PWD/src:/scan/src:ro" -v "$PWD/scripts:/scan/scripts:ro" -v "$PWD/report:/scan/report" \
+            -w /scan/report python:3.12-slim python /scan/scripts/asset_scan.py /scan/src
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: scan-report
+          path: report/scan-report.json
+
   build:
+    needs: scan
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,12 +43,19 @@ jobs:
       - run: npm run build
         env:
           PATH_PREFIX: /game11ty/
+      - name: Hash manifest of the release
+        run: python3 scripts/asset_scan.py --manifest _site
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
+
   deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
