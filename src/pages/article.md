@@ -210,6 +210,31 @@ After the build, CI publishes [`asset-manifest.json`](/asset-manifest.json), a S
 
 The lesson behind it is the security note's. In the July 2026 OpenAI–Hugging Face incident, the way in was a flaw in an HDF5 dataset parser running with access to credentials ([Wikipedia](https://en.wikipedia.org/wiki/OpenAI%E2%80%93HuggingFace_incident)). The scan parses untrusted files where nothing can be reached, and treats a file whose content doesn't match its label as an error. Run it locally with `python3 scripts/asset_scan.py src`.
 
+### Magic bytes: auditing at the core
+
+Most file formats start with a fixed signature, its *magic bytes*. Software reads them to learn what a file really is, whatever its name says. The extension is a label anyone can change; the magic bytes are part of the content.
+
+| Format | First bytes (hex) | As text |
+| --- | --- | --- |
+| PNG | `89 50 4E 47 0D 0A 1A 0A` | `‰PNG` |
+| JPEG | `FF D8 FF` | |
+| GIF | `47 49 46 38` | `GIF8` |
+| WebP | `52 49 46 46 … 57 45 42 50` | `RIFF…WEBP` |
+| PDF | `25 50 44 46 2D` | `%PDF-` |
+| glTF binary (GLB) | `67 6C 54 46` | `glTF` |
+| ZIP (also .docx, .pptx) | `50 4B` | `PK` |
+| Windows program | `4D 5A` | `MZ` |
+
+Each of these is a run of `u8` integers, 0–255: the same type Rust uses for pixel channels. In Rust, detecting a type this way is called *format detection* or *file type sniffing* (`image::guess_format`, the `infer` crate). The bytes are the same in any language, so the game11ty scan does it in Python.
+
+**Why auditing at the core is the secure default.** Every layer above the bytes is a claim: the file name, the extension, the server's `Content-Type`, an XMP field, a page's `alt` text. Any of them can be wrong or forged. The bytes are what a decoder actually executes on, so an audit that starts there can't be fooled by a relabelled file. It catches:
+
+- **Disguised executables:** a program named `photo.png` still starts with `MZ`.
+- **Mislabelled files:** game11ty's Webflow favicons were PNG data named `.jpg`. GitHub Pages sets `Content-Type` from the extension and sends no `X-Content-Type-Options: nosniff` header, so those files were served as `image/jpeg`, and each browser guessed the real type itself.
+- **Wrong-parser attacks:** a file routed by its label to the wrong decoder lands in code that wasn't built for it, which is where memory bugs get triggered.
+
+Magic bytes only prove what kind of file it is, not that it's safe. A file can carry a valid signature and still be malformed or hostile, which is why the scan goes on to check structure, bounds and active content. The order matters: confirm the type from the bytes first, then validate it as that type.
+
 ## Rights metadata as lightweight DRM
 
 XMP rights fields don't lock an image; they declare who owns it and on what terms, in a form machines act on. Real DRM encrypts content. Rights metadata is closer to a label that travels with the file: it can be stripped, but a crawler, DAM or training pipeline that respects it can read the terms without a human.
