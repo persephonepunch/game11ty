@@ -166,6 +166,18 @@ Three things shape that cost:
 
 **Conversion strips by default.** Converting the 101 KB gear photo to WebP with Google's `cwebp` gave 28 KB and **no metadata at all**: the alt text and rights were gone. With `-metadata xmp` the result was 33 KB and both survived. Other encoders and optimisers, including Rust-based tools such as `oxipng`, also drop metadata unless told to keep it, so set the keep option explicitly in your build.
 
+**Rust and the pixel buffer.** When Rust handles an image, it works on a *pixel buffer*: an array of integer channel values, usually one unsigned byte (`u8`, 0–255) per red, green, blue and alpha channel. Each stage has its own name:
+
+| Stage | Term | In Rust |
+| --- | --- | --- |
+| Reading a JPG, PNG or WebP into pixel values | Image decoding; *memory-safe decoding* when done in Rust | The compiler's ownership and bounds checks rule out the buffer overflows that C decoders are prone to |
+| Holding the values in memory | Pixel buffer or framebuffer | `ImageBuffer` of `Rgba<u8>` in the `image` crate |
+| Storing each channel as a whole number | Integer pixel format | `u8` per channel; `u16` or `f32` for higher bit depth |
+| Turning shapes or 3D geometry into pixels | Rasterization; *software rendering* on the CPU | Fills the buffer directly |
+| Painting a `<canvas>` on each frame from WebAssembly | Rendering into WASM linear memory | Rust writes the bytes, JavaScript passes them to the canvas as `ImageData`; *zero-copy* when no copy is made |
+
+None of these stages handles XMP. The metadata sits beside the pixel data, so a pipeline that decodes to a pixel buffer and encodes again keeps only the pixels, as the `cwebp` test showed. A Rust image pipeline has to read the XMP before decoding and write it back after encoding, or the rights are lost at the first conversion.
+
 ## Rights metadata as lightweight DRM
 
 XMP rights fields don't lock an image; they declare who owns it and on what terms, in a form machines act on. Real DRM encrypts content. Rights metadata is closer to a label that travels with the file: it can be stripped, but a crawler, DAM or training pipeline that respects it can read the terms without a human.
