@@ -351,6 +351,21 @@ A video's poster frame is an ordinary JPG or PNG, so it carries XMP rights like 
 
 The file names and dates are placeholders. Write the same description and rights into three places: the poster's XMP, the `VideoObject` JSON-LD (`thumbnailUrl` points at the poster), and the video file itself. For that last one, turn on *Include Source XMP Metadata* when rendering from After Effects. If the video is re-encoded or stripped, the poster still carries the rights.
 
+### Video optimization in Adobe Media Encoder
+
+Media Encoder is where a video's size and its metadata are decided together. The *Metadata* button in Export Settings offers two ways to keep XMP: *Embed in Output File* or *Create Sidecar File*, a separate `.xmp` next to the video ([Adobe](https://helpx.adobe.com/media-encoder/using/export-settings-reference.html)). Users on Adobe's forum report that embedding is greyed out for H.264 MP4 and available for QuickTime ([Adobe community](https://community.adobe.com/questions-729/embed-xmp-metadata-in-output-file-options-are-disabled-for-mp4-1341890)). So the most common web format often ships with no rights inside it.
+
+| Setting | Web recommendation | Why |
+| --- | --- | --- |
+| Format | H.264 (MP4) for reach; H.265 or AV1 where supported | Smaller files at the same quality |
+| Bitrate encoding | VBR, 2 pass | About 10% better quality for the same size, at roughly twice the encode time ([guide](https://annenbergdl.org/compress-video-for-the-web-with-media-encoder/)) |
+| Maximum bitrate | About 2× the target | Leaves room for fast motion without raising the average |
+| Target bitrate | About 16 Mbps for streaming uploads; lower for embedded web video | Platforms re-encode anyway; 32–40 Mbps is master quality ([guide](https://annenbergdl.org/compress-video-for-the-web-with-media-encoder/)) |
+| Metadata | *Create Sidecar File* for MP4; *Embed* for QuickTime masters | Keeps the rights whether or not the container can hold XMP |
+| Poster | Export a still frame as JPG and give it rights XMP | The frame crawlers and social previews index |
+
+For game footage like the Valorant streams on the board, fast motion is what eats bitrate. Keep 2-pass VBR, and put the rights in the sidecar, the poster and the `VideoObject` JSON-LD. Don't rely on the MP4 alone.
+
 ### Draco compression
 
 [Draco](https://github.com/google/draco) is Google's open-source codec for compressing mesh geometry: vertex positions, normals, UVs and triangles. It isn't a media type of its own. In glTF it's carried by the `KHR_draco_mesh_compression` extension ([Khronos](https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_draco_mesh_compression/README.md)), and the file is still served as `model/gltf-binary` (`.glb`) or `model/gltf+json` (`.gltf`).
@@ -414,5 +429,6 @@ exiftool -overwrite_original -XMP-xmpMM:all= photo.jpg
 - [Adobe: Cinema 4D and Cineware in After Effects](https://helpx.adobe.com/after-effects/using/c4d.html) and [Maxon: Cineware](https://help.maxon.net/cw/en-us/Content/html/CINEWARE_ADOBE_AFTER_EFFECTS_3D_FILE.html)
 - [Adobe: export 3D vector artwork in Illustrator](https://helpx.adobe.com/illustrator/desktop/special-effects-styles/create-3d-graphics/export-3d-vector-artwork.html)
 - [Adobe: Substance 3D Stager import and export formats](https://helpx.adobe.com/substance-3d-stager/getting-started/import-export-formats.html)
+- [Adobe: Media Encoder export settings reference](https://helpx.adobe.com/media-encoder/using/export-settings-reference.html), [Adobe community: XMP embed disabled for MP4](https://community.adobe.com/questions-729/embed-xmp-metadata-in-output-file-options-are-disabled-for-mp4-1341890) and [Annenberg Digital Lounge: compress video for the web with Media Encoder](https://annenbergdl.org/compress-video-for-the-web-with-media-encoder/)
 - [How to export Cinema 4D to GLB](https://svilenkovic.com/3d/how-to-export-cinema4d-to-glb)
 - Measurements and parser output: game11ty files, the [live site](https://persephonepunch.github.io/game11ty/) and the CLO jacket and avatar GLBs, 3 October 2026
