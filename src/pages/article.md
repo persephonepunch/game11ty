@@ -141,6 +141,38 @@ Two things in this code generalise to any metadata parser:
 - **Treat XMP as RDF, not text.** The same property can be written as an element or an attribute, and exiftool spreads properties across several `rdf:Description` blocks, one per namespace. My first version read only the first block and reported every rights field as missing.
 - **The page and the file are read separately.** `img.get("alt")` comes from the DOM; `xmp()` comes from bytes fetched on their own. A dataset built from downloaded images only ever sees the second.
 
+### Crawling: BFS, DFS and the files that set the rules
+
+Before a scraper can break a page into roles, it has to find the pages. game11ty's `sync.py` does this with a **BFS crawl**, short for *breadth-first search*: it visits a site level by level, starting from the home page.
+
+1. Put `/` in a queue.
+2. Take the page at the front of the queue and download it.
+3. Collect its internal links, and add any page not seen before to the back of the queue.
+4. Repeat until the queue is empty or the page limit is reached (200 in `config.py`).
+
+```
+Level 0:  /
+Level 1:  /about   /products   /contact          ← linked from the home page
+Level 2:  /products/omen-35l   /products/headset ← linked from level 1
+```
+
+The alternative is **DFS**, *depth-first search*: follow one link, then the first link on that page, as deep as possible before backing up. On a site with a blog or long pagination, DFS can spend its whole budget in one corner. BFS reaches the main pages first, finds each page by its shortest route, and can't be trapped by one long chain of links. The "seen" list stops pages that link to each other from being fetched twice.
+
+A crawl copies what's **reachable by links**, not the site's file tree; a web server never shows its files. Pages nothing links to are missed unless they're listed in `sitemap.xml` or seeded in `config.py`, uploads no page uses are never copied, and CMS data, drafts and password-protected pages stay behind.
+
+**The files that tell crawlers the rules.** Four conventions let a site describe how crawlers and AI should treat it:
+
+| File or tag | Where it lives | What it says | Does it enforce anything? |
+| --- | --- | --- | --- |
+| `robots.txt` | `/robots.txt` at the domain root ([RFC 9309](https://www.rfc-editor.org/rfc/rfc9309)) | Which paths each crawler may fetch, by name, including AI crawlers | No. Well-behaved crawlers obey it; hostile ones ignore it, and listing a private path advertises it |
+| `nofollow` | `rel="nofollow"` on a link, or `<meta name="robots" content="nofollow">` for a whole page | Don't follow this link. Google also reads `sponsored` and `ugc` | No. Google treats it as a hint, and the page can still be found through sitemaps or other links ([Google](https://developers.google.com/search/docs/crawling-indexing/qualify-outbound-links)) |
+| `security.txt` | `/.well-known/security.txt` ([RFC 9116](https://www.rfc-editor.org/rfc/rfc9116), 2022) | Where to report a vulnerability. `Contact` and `Expires` are required | No. It's a contact card for security researchers |
+| `llms.txt` | `/llms.txt`, or under a subpath | A Markdown summary of the site with links to versions written for AI, such as Markdown pages. A 2024 proposal by Jeremy Howard, not a standard ([llmstxt.org](https://llmstxt.org/)) | No. It's an invitation, not a permission |
+
+**The security point:** all four are declarations, not locks. They steer the crawlers that choose to listen, so use them for that: `robots.txt` and `nofollow` to keep good crawlers on the right pages, `security.txt` so people can report problems, `llms.txt` to point AI at clean, rights-labelled content. Never put secrets or private paths in them, since they're public. What actually keeps a crawler out is the allow list, sign-in and encryption described in later sections.
+
+On game11ty: `sync.py` doesn't read `robots.txt`, which is fine because it only crawls your own site; a crawler of other people's sites must respect it. game11ty has none of the four files yet. `robots.txt` and `security.txt` must sit at the domain root (`persephonepunch.github.io`), which a GitHub project site doesn't control. `llms.txt` can live at `/game11ty/llms.txt` and point to this article's Markdown version.
+
 ## Optimization and bit size
 
 Across the 15 images on game11ty, metadata adds 56 KB to 4.1 MB, or 1.4%. That cost is fixed per file, not per pixel, so it barely registers on large photos and dominates small icons. These are the measured figures:
@@ -654,5 +686,6 @@ exiftool -overwrite_original -XMP-xmpMM:all= photo.jpg
 - [Wikipedia: List of file signatures](https://en.wikipedia.org/wiki/List_of_file_signatures), [Gary Kessler: File Signatures Table](https://www.garykessler.net/library/file_sigs.html), [MDN: MIME types](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/MIME_types) and [WHATWG MIME Sniffing](https://mimesniff.spec.whatwg.org/)
 - [Shopify: stagedUploadsCreate](https://shopify.dev/docs/api/admin-graphql/latest/mutations/stageduploadscreate), [Shopify: fileCreate](https://shopify.dev/docs/api/admin-graphql/latest/mutations/fileCreate) and [Webflow: Upload Asset](https://developers.webflow.com/data/reference/assets/assets/create), [WordPress REST API: Media](https://developer.wordpress.org/rest-api/reference/media/)
 - [Shopify: app proxies](https://shopify.dev/docs/apps/build/online-store/app-proxies), [WordPress: HTTP API](https://developer.wordpress.org/plugins/http-api/), [Astro: environment variables](https://docs.astro.build/en/guides/environment-variables/) and [Next.js: environment variables](https://nextjs.org/docs/pages/guides/environment-variables)
+- [RFC 9309: Robots Exclusion Protocol](https://www.rfc-editor.org/rfc/rfc9309), [RFC 9116: security.txt](https://www.rfc-editor.org/rfc/rfc9116), [llmstxt.org](https://llmstxt.org/) and [Google: qualify outbound links](https://developers.google.com/search/docs/crawling-indexing/qualify-outbound-links)
 - [How to export Cinema 4D to GLB](https://svilenkovic.com/3d/how-to-export-cinema4d-to-glb)
 - Measurements and parser output: game11ty files, the [live site](https://persephonepunch.github.io/game11ty/) and the CLO jacket and avatar GLBs, 3 October 2026
