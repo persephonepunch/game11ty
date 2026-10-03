@@ -178,6 +178,20 @@ Three things shape that cost:
 
 None of these stages handles XMP. The metadata sits beside the pixel data, so a pipeline that decodes to a pixel buffer and encodes again keeps only the pixels, as the `cwebp` test showed. A Rust image pipeline has to read the XMP before decoding and write it back after encoding, or the rights are lost at the first conversion.
 
+## Security note
+
+**Pixels and tokens.** Images and text are split into discrete integer units before a model uses them. A pixel stores brightness (0–255 per channel); a token stores a vocabulary index. Inside a model both become embedding vectors, which is how multimodal models compare images and language. Rust is common in the pipeline, including Hugging Face's tokenizers, because its compiler enforces memory safety.
+
+**Parsers are the attack surface.** Many decoders for SVG and 3D models (glTF, Draco, OBJ, FBX) are written in C or C++, and a malformed file can exploit a memory bug in them. SVG can also carry scripts. Protect these files on three layers:
+
+- **Code:** parse untrusted files with memory-safe code such as Rust, or sandbox C/C++ decoders.
+- **Content:** sign assets (e.g. C2PA) to prove owner and integrity. XMP rights fields can be edited, so they aren't proof.
+- **Transit:** serve over TLS. It protects files in transit only, so it complements signing.
+
+AI agents should check signatures and rights before trusting a file.
+
+**Higher-risk assets.** DAM libraries, 3D models and firmware need extra care: verify by hash or signature, restrict publishing, scan before processing, and install firmware only with a valid signature (secure boot).
+
 ## Rights metadata as lightweight DRM
 
 XMP rights fields don't lock an image; they declare who owns it and on what terms, in a form machines act on. Real DRM encrypts content. Rights metadata is closer to a label that travels with the file: it can be stripped, but a crawler, DAM or training pipeline that respects it can read the terms without a human.
