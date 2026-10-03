@@ -1,19 +1,14 @@
 ---
-layout: "article.njk"
+layout: "kb.njk"
 permalink: "/article/"
 title: "ALT, XMP and Favicons: Image Metadata for Rights and Media Management"
 description: "How alt text, embedded XMP and favicons carry descriptions and rights for search engines, DAMs and AI models, with JPG, PNG, WebP, glTF and Draco examples."
 templateEngineOverride: md
 ---
-# ALT, XMP and Favicons: Image Metadata for Rights and Media Management
-
-*October 3, 2026*
-
 Search engines, asset managers and AI models decide what an image shows, and who controls it, from text: the `alt` attribute, the metadata inside the file, and structured data on the page. When those three agree, a machine doesn't have to guess. When they're missing or contradict each other, it guesses, and the guess travels with the image into indexes, datasets and model outputs.
 
 This article explains each layer, the Adobe XMP standard behind embedded metadata, how it's stored in JPG, PNG and WebP, and how rights fields act as a lightweight form of DRM. It ends with a worked example, the game11ty site, and a checklist for agencies and media teams.
 
-**Download:** [Game streaming XMP data board (PDF, 8.9 MB)](https://persephonepunch.github.io/game11ty/docs/gamestreaming-xmpdata.pdf), the screenshots this article is based on.
 
 ## Three layers, one description
 
