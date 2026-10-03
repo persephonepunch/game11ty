@@ -361,6 +361,21 @@ So the Worker checks the request's form type first, then each file part's real b
 
 **Plain POST and GET to Xano.** Between the Worker and Xano there's no SDK or extra security vendor, just HTTPS requests: POST to send data such as uploads and rights records, GET to read it. Xano is still a hosted service, so the security comes from what each endpoint enforces: sign-in, input checks, Addons and encrypted fields. Two rules keep it safe. Never put secrets or personal data in a GET URL, because servers and browsers log URLs; send them in a POST body. And keep the Xano API key in the Worker's secrets, never in a theme or page script, so it stays protected whatever theme or site builder is in front.
 
+### Design to theme: one backend for every template engine
+
+The Worker and Xano sit below the template layer. Whether a page is built with Liquid, PHP, Astro or React, the template only produces HTML and URLs; the checks, allow list, encryption and rights records all run in the Worker and Xano over HTTPS. Swap the front end and the backend rules stay the same. What changes is *when* each front end talks to the Worker, and where its secrets must live:
+
+| Front end | Template engine | When pages render | How it reaches the Worker | Keep secrets in |
+| --- | --- | --- | --- | --- |
+| Shopify | Liquid | Every request, on Shopify's servers | Liquid can't make HTTP calls, so through an [app proxy](https://shopify.dev/docs/apps/build/online-store/app-proxies): Shopify forwards a store URL to the Worker with a signature the Worker verifies, and a reply sent as `application/liquid` renders inside the theme. Or browser calls | Worker secrets only; nothing in the theme |
+| WordPress | PHP templates and blocks | Every request, on the WordPress server | Server-side with the [HTTP API](https://developer.wordpress.org/plugins/http-api/) (`wp_remote_get`, `wp_remote_post`), or browser calls | `wp-config.php` or server environment, never theme files |
+| Jekyll | Liquid | Once, at build time | The build fetches and bakes data in; browser calls for live data | Build environment; never in the `_site/` output |
+| Eleventy | Liquid, Nunjucks and others | Once, at build time | Data files fetch at build; browser calls for live data | Build environment; never in the output |
+| Astro | Astro components | At build by default; per request with server rendering | Fetch in the component script at build or request time; browser calls | Unprefixed variables; anything named `PUBLIC_` reaches the browser ([Astro](https://docs.astro.build/en/guides/environment-variables/)) |
+| Next.js | React | At build, or per request with server components | Server-side fetch; browser calls | Unprefixed variables; anything named `NEXT_PUBLIC_` is written into the browser bundle ([Next.js](https://nextjs.org/docs/pages/guides/environment-variables)) |
+
+The rule is the same in every row: the Worker's URL can appear in a template, but its keys never do. One caution for the build-time front ends (Jekyll, Eleventy, static Astro and Next.js): data fetched at build is frozen into the HTML until the next build. Anything that must stay current or private, such as a rights change or a signed-in user's files, should be fetched live through the Worker, not baked in.
+
 This part of the spec isn't built or checked against the CRM Sync code yet; it describes where the check should sit.
 
 ## Rights metadata as lightweight DRM
@@ -638,5 +653,6 @@ exiftool -overwrite_original -XMP-xmpMM:all= photo.jpg
 - [Cloudflare: allow traffic from IPs in an allowlist](https://developers.cloudflare.com/waf/custom-rules/use-cases/allow-traffic-from-ips-in-allowlist/), [Xano: encrypting fields](https://www.xano.com/learn/Encrypting-Fields-Database/) and [Xano: Addons](https://docs.xano.com/building/logic/addons)
 - [Wikipedia: List of file signatures](https://en.wikipedia.org/wiki/List_of_file_signatures), [Gary Kessler: File Signatures Table](https://www.garykessler.net/library/file_sigs.html), [MDN: MIME types](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/MIME_types) and [WHATWG MIME Sniffing](https://mimesniff.spec.whatwg.org/)
 - [Shopify: stagedUploadsCreate](https://shopify.dev/docs/api/admin-graphql/latest/mutations/stageduploadscreate), [Shopify: fileCreate](https://shopify.dev/docs/api/admin-graphql/latest/mutations/fileCreate) and [Webflow: Upload Asset](https://developers.webflow.com/data/reference/assets/assets/create), [WordPress REST API: Media](https://developer.wordpress.org/rest-api/reference/media/)
+- [Shopify: app proxies](https://shopify.dev/docs/apps/build/online-store/app-proxies), [WordPress: HTTP API](https://developer.wordpress.org/plugins/http-api/), [Astro: environment variables](https://docs.astro.build/en/guides/environment-variables/) and [Next.js: environment variables](https://nextjs.org/docs/pages/guides/environment-variables)
 - [How to export Cinema 4D to GLB](https://svilenkovic.com/3d/how-to-export-cinema4d-to-glb)
 - Measurements and parser output: game11ty files, the [live site](https://persephonepunch.github.io/game11ty/) and the CLO jacket and avatar GLBs, 3 October 2026
