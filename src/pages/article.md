@@ -171,7 +171,7 @@ A crawl copies what's **reachable by links**, not the site's file tree; a web se
 
 **The security point:** all four are declarations, not locks. They steer the crawlers that choose to listen, so use them for that: `robots.txt` and `nofollow` to keep good crawlers on the right pages, `security.txt` so people can report problems, `llms.txt` to point AI at clean, rights-labelled content. Never put secrets or private paths in them, since they're public. What actually keeps a crawler out is the allow list, sign-in and encryption described in later sections.
 
-On game11ty: `sync.py` doesn't read `robots.txt`, which is fine because it only crawls your own site; a crawler of other people's sites must respect it. game11ty has none of the four files yet. `robots.txt` and `security.txt` must sit at the domain root (`persephonepunch.github.io`), which a GitHub project site doesn't control. `llms.txt` can live at `/game11ty/llms.txt` and point to this article's Markdown version.
+game11ty deliberately has none of these files: it's a demo, not meant to be found or ranked. They're here because a developer making content for AI security needs the concepts. Know which signals crawlers read, that `robots.txt` and `security.txt` must sit at the domain root while `llms.txt` can live under a subpath, and that none of them replaces real access control. game11ty's own `sync.py` doesn't read `robots.txt`, which is fine for crawling your own site; a crawler of other people's sites must respect it.
 
 ## Optimization and bit size
 
