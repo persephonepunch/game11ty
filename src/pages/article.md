@@ -439,7 +439,9 @@ An `alt` is read in the context of the section around it. The section's `id` is 
 | `#complete-your-setup` | Complete / Your Valorant Setup | 3 product photos | Bundles for FPS Games: HyperX headset, microphone, keyboard and mouse on a desk (and two more) |
 | `#why-omen-valorant` | Why / Omen x Valorant | Partnership art | OMEN, HyperX and Riot Games partnership artwork for Valorant |
 
-This shows two gaps in game11ty. The page has three H1s, and two of them ("Complete", "Why") only make sense when read with the H2 below them. Two sections have no H1 at all. A parser building an outline gets "Complete" and "Why" as top-level topics. A cleaner index is one H1 for the page and an H2 per section that reads on its own:
+This shows the real gap in game11ty: not how many H1s it has, but what they say. Two of its three H1s ("Complete", "Why") only make sense when read with the H2 below them, and two sections have no H1 at all, so a parser building an outline gets "Complete" and "Why" as top-level topics.
+
+Give every section an `id` and a heading that reads on its own. A section may open with its own H1 when it stands alone as a topic, and dynamic pages can load several H1s as views or sections arrive. HTML allows this as long as the H1s aren't nested inside one another, though a single H1 per page is still the common recommendation ([MDN](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/Heading_Elements)). Whatever loads, keep the heading order logical (H1, then H2, with no skipped levels) so screen readers and parsers can still build a clean outline:
 
 ```html
 <section id="complete-your-setup">
@@ -591,7 +593,7 @@ Draco only compresses geometry, so the mesh data shrinks and the textures and th
 
 - <input type="checkbox" disabled> Keep one description per image in a single source file, and generate the `alt`, XMP and JSON-LD from it
 - <input type="checkbox" disabled> Write alt text that adds to the section's heading instead of repeating it
-- <input type="checkbox" disabled> Give the page one H1 and each section an `id` plus a heading that reads on its own
+- <input type="checkbox" disabled> Give every section an `id` and a heading that reads on its own; separately loaded sections may each bring an H1 (never nested), with no skipped heading levels
 - <input type="checkbox" disabled> Embed Copyright Notice, Creator, Credit Line, Web Statement of Rights, Licensor URL and a Data Mining value
 - <input type="checkbox" disabled> Point the Web Statement of Rights and the JSON-LD `license` at the same live rights page
 - <input type="checkbox" disabled> Set `og:image:alt` for every share image, and fill the alt-text field in ad tools
