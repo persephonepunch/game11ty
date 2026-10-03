@@ -7,7 +7,12 @@
   {% if ogTitle or title %}<meta property="og:title" content="{{ ogTitle or title }}">{% endif %}
   {% if ogDescription or description %}<meta property="og:description" content="{{ ogDescription or description }}">{% endif %}
   {% if ogImage %}<meta property="og:image" content="{% if ogImageRelative %}{{ site.url }}{% endif %}{{ ogImage }}">{% endif %}
+  {% if ogImageAlt %}<meta property="og:image:alt" content="{{ ogImageAlt }}"><meta name="twitter:image:alt" content="{{ ogImageAlt }}">{% endif %}
   <meta content="website" property="og:type"/>
+  {% if page.url == "/" %}<script type="application/ld+json">{{ {
+    "@context": "https://schema.org",
+    "@graph": images | imageObjects(site.url, site.rights)
+  } | dump | safe }}</script>{% endif %}
   <meta content="summary_large_image" name="twitter:card"/>
   <meta content="width=device-width, initial-scale=1" name="viewport"/>
   <meta content="Webflow" name="generator"/>

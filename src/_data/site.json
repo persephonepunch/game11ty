@@ -1,4 +1,10 @@
 {
   "url": "https://persephonepunch.github.io/game11ty",
-  "source": "https://omen-valorant.webflow.io"
+  "source": "https://omen-valorant.webflow.io",
+  "rights": {
+    "holder": "Rights Holder (demo)",
+    "notice": "© Rights Holder. Demonstration rights metadata (DRM) for agencies; all rights reserved by the respective owners.",
+    "url": "https://persephonepunch.github.io/game11ty/rights/",
+    "terms": "Demonstration only. Not licensed for reuse. Contact the rights holder for licensing."
+  }
 }

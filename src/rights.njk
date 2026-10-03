@@ -1,0 +1,24 @@
+---
+layout: "base.njk"
+permalink: "/rights/"
+title: "Image rights and alt data"
+description: "How this page labels its images for people, search engines and AI models."
+---
+<div style="max-width:720px;margin:0 auto;padding:120px 16px 80px;color:#fff;font-family:sans-serif;line-height:1.6">
+  <h1>Image rights and alt data</h1>
+  <p>{{ site.rights.notice }}</p>
+  <p><strong>Usage terms:</strong> {{ site.rights.terms }}</p>
+  <h2>Why this page exists</h2>
+  <p>This is a demonstration of rights and description metadata for agencies. Each image on the site carries the same description in three machine-readable places:</p>
+  <ol>
+    <li><strong>HTML <code>alt</code></strong> – read by screen readers, crawlers and multimodal models that parse the page.</li>
+    <li><strong>XMP inside the file</strong> – <code>Iptc4xmpCore:AltTextAccessibility</code>, <code>dc:description</code>, <code>dc:rights</code>, <code>xmpRights:WebStatement</code>, <code>plus:LicensorURL</code>. It travels with the file when it's downloaded, scraped or ingested into a DAM or training set.</li>
+    <li><strong>schema.org JSON-LD</strong> – <code>ImageObject</code> with <code>description</code>, <code>copyrightNotice</code>, <code>license</code> and <code>acquireLicensePage</code>, the fields Google Images uses for its Licensable badge.</li>
+  </ol>
+  <p>When the three agree, a model or index doesn't have to guess what an image shows or who controls it.</p>
+  <h2>Images</h2>
+  <ul>
+  {% for img in images %}<li><a href="{{ img.src }}" style="color:#ff4655">{{ img.src | replace("/assets/", "") }}</a> – {{ img.alt }}</li>
+  {% endfor %}</ul>
+  <p><a href="/docs/webflow-python.pdf" style="color:#ff4655">Build board (PDF)</a></p>
+</div>
