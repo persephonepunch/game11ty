@@ -253,6 +253,10 @@ A file is at risk at two moments. **At publish**, when it goes live: a bad or mi
 
 TLS protects data only while it moves, and encryption at rest protects it only while it's stored, so CRM Sync needs both. Its docs already store credentials in Cloudflare's encrypted key-value store, one key per customer, masked in every API response.
 
+![Publish and unfurl layers. At publish: author or AI, then the release scan in an isolated container (built today), then TLS at the Cloudflare edge, then Xano field encryption with AES and a key in an environment variable. At unfurl: a requester (bot, user or scraper) meets the Cloudflare allow list of verified bots and IPs, then Xano Addons join the rights record. TLS covers both lanes, and the same rules run at every Cloudflare location and for every Xano tenant.](/docs/publish-unfurl-layers.png)
+
+A file enters on the publish lane and is scanned before it reaches Cloudflare and Xano; a request enters on the unfurl lane and meets the allow list first.
+
 ### Decision ladders
 
 A decision ladder is a fixed set of questions asked in order. A file or request climbs one rung at a time and stops at the first "no", so every outcome has a known reason.

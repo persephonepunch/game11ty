@@ -36,6 +36,27 @@ flowchart TB
   end
 \`\`\``
 
+
+const LAYERS = `\`\`\`mermaid
+flowchart LR
+  subgraph publish["At publish"]
+    author["Author or AI"] --> scan["Release scan<br/>isolated, no network<br/>(built today)"]
+  end
+  subgraph unfurl["At unfurl"]
+    req["Requester<br/>bot, user, scraper"]
+  end
+  subgraph cf["Cloudflare edge"]
+    tls["TLS<br/>sealed in transit"]
+    allow["Allow list<br/>verified bots, IPs"]
+  end
+  subgraph xano["Xano"]
+    enc["Field encryption<br/>AES, key in env var"]
+    addons["Addons<br/>rights record joined"]
+  end
+  scan --> tls --> enc
+  req -- link preview or visit --> allow --> addons
+\`\`\``
+
 export function render({ site }) {
   const src = readFileSync("src/pages/article.md", "utf8")
   const [, fm, body] = src.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/)
@@ -47,6 +68,7 @@ export function render({ site }) {
     .replace(/\]\(\/(?!\/)/g, `](${site.url}/`)
     .replace(/(!\[[^\]]*\]\([^)]*pipeline-diagram\.png\))/, `$1\n\n${PIPELINE}`)
     .replace(/(!\[[^\]]*\]\([^)]*decision-ladders\.png\))/, `$1\n\n${LADDERS}`)
+    .replace(/(!\[[^\]]*\]\([^)]*publish-unfurl-layers\.png\))/, `$1\n\n${LAYERS}`)
   const lead = `![${field("ogImageAlt")}](${site.url}${field("heroImage")})\n\n**Summary.** ${field("summary")}\n\n`
   return `# ${title}\n\n${lead}${md}`
 }
