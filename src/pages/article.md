@@ -192,6 +192,24 @@ AI agents should check signatures and rights before trusting a file.
 
 **Higher-risk assets.** DAM libraries, 3D models and firmware need extra care: verify by hash or signature, restrict publishing, scan before processing, and install firmware only with a valid signature (secure boot).
 
+## Release scan
+
+game11ty now gates every deploy on an asset scan. [`asset_scan.py`](https://github.com/persephonepunch/game11ty/blob/main/scripts/asset_scan.py) runs in a throwaway Docker container with no network, a read-only file system and no secrets, so a hostile file has nothing to reach. The site only builds if the scan passes.
+
+| Asset | What it checks |
+| --- | --- |
+| Every file | Real type matches the extension, read from the file's first bytes (its "magic bytes", e.g. `89 50 4E 47` = PNG); no executables, even disguised |
+| JPG / PNG / WebP | Valid file structure; rights XMP present (`WebStatement`, alt text) |
+| SVG | Valid XML; no `<script>`, `on…=` handlers, `javascript:` links, `<foreignObject>`, external URLs or XML entities |
+| glTF / GLB | Header and chunks valid; every bufferView and accessor inside its data; buffer paths can't escape the model folder; `asset.copyright` set and not an exporter's default |
+| PDF | No JavaScript, auto-run, launch or embedded-file actions |
+
+On a test set of deliberately bad files it caught all 13 planted problems: a PNG renamed `.jpg`, an executable named `.png`, an image with no rights data, a hostile SVG, a PDF with auto-running JavaScript, and a GLB doctored so its data pointers run past the end of the file. The real CLO avatar fails too, on Stager's "2025 (c) Adobe Inc." copyright, which is the point: it shouldn't ship with that claim.
+
+After the build, CI publishes [`asset-manifest.json`](/asset-manifest.json), a SHA-256 hash of every released file, so a download can be checked against what was scanned.
+
+The lesson behind it is the security note's. In the July 2026 OpenAI–Hugging Face incident, the way in was a flaw in an HDF5 dataset parser running with access to credentials ([Wikipedia](https://en.wikipedia.org/wiki/OpenAI%E2%80%93HuggingFace_incident)). The scan parses untrusted files where nothing can be reached, and treats a file whose content doesn't match its label as an error. Run it locally with `python3 scripts/asset_scan.py src`.
+
 ## Rights metadata as lightweight DRM
 
 XMP rights fields don't lock an image; they declare who owns it and on what terms, in a form machines act on. Real DRM encrypts content. Rights metadata is closer to a label that travels with the file: it can be stripped, but a crawler, DAM or training pipeline that respects it can read the terms without a human.
@@ -461,5 +479,6 @@ exiftool -overwrite_original -XMP-xmpMM:all= photo.jpg
 - [Adobe: export 3D vector artwork in Illustrator](https://helpx.adobe.com/illustrator/desktop/special-effects-styles/create-3d-graphics/export-3d-vector-artwork.html)
 - [Adobe: Substance 3D Stager import and export formats](https://helpx.adobe.com/substance-3d-stager/getting-started/import-export-formats.html)
 - [Adobe: Media Encoder export settings reference](https://helpx.adobe.com/media-encoder/using/export-settings-reference.html), [Adobe community: XMP embed disabled for MP4](https://community.adobe.com/questions-729/embed-xmp-metadata-in-output-file-options-are-disabled-for-mp4-1341890) and [Annenberg Digital Lounge: compress video for the web with Media Encoder](https://annenbergdl.org/compress-video-for-the-web-with-media-encoder/)
+- [Wikipedia: OpenAI–HuggingFace incident](https://en.wikipedia.org/wiki/OpenAI%E2%80%93HuggingFace_incident)
 - [How to export Cinema 4D to GLB](https://svilenkovic.com/3d/how-to-export-cinema4d-to-glb)
 - Measurements and parser output: game11ty files, the [live site](https://persephonepunch.github.io/game11ty/) and the CLO jacket and avatar GLBs, 3 October 2026
