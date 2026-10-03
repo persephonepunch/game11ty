@@ -1,0 +1,17 @@
+{
+  "name": "game11ty-worker",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "private": "true",
+  "devDependencies": {
+    "miniflare": "^4.20260730.0"
+  }
+}

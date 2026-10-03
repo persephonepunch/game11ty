@@ -20,19 +20,38 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Scan assets (isolated, no network)
+      - name: Scan assets, then prove the scan rules with tests (isolated, no network)
         run: |
-          docker run --rm --network none --read-only --tmpfs /tmp \
-            -v "$PWD/src:/scan/src:ro" -v "$PWD/scripts:/scan/scripts:ro" -v "$PWD/report:/scan/report" \
-            -w /scan/report python:3.12-slim python /scan/scripts/asset_scan.py /scan/src
+          docker run --rm --network none --read-only --tmpfs /tmp -e PYTHONDONTWRITEBYTECODE=1 \
+            -v "$PWD/src:/scan/src:ro" -v "$PWD/scripts:/scan/scripts:ro" -v "$PWD/tests:/scan/tests:ro" \
+            -v "$PWD/report:/scan/report" -w /scan/report python:3.12-slim sh -c '
+              python /scan/scripts/asset_scan.py /scan/src &&
+              python -m unittest discover -s /scan/tests -v &&
+              python /scan/tests/mutate.py'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: scan-report
           path: report/scan-report.json
 
+  worker-tests:
+    # SB-15: the head function, tested in Cloudflare's runtime (workerd via
+    # Miniflare), plus a mutation check that every rule has a failing test.
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: worker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: node --test
+      - run: node mutate.mjs
+
   build:
-    needs: scan
+    needs: [scan, worker-tests]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

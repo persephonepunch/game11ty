@@ -17,7 +17,7 @@ Checks, per file:
                asset.copyright set and not a tool's default claim
   PDF          no JavaScript, auto-run or launch actions
 """
-import hashlib, json, re, struct, sys
+import hashlib, html, json, re, struct, sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -102,6 +102,11 @@ def check_svg(p, b, out):
     for rx, why in SVG_BAD:
         if rx.search(text):
             out.append(("error", f"SVG {why}"))
+    # Evasion: decode character references (java&#115;cript:) and drop the
+    # whitespace and control characters browsers ignore inside a URL scheme.
+    decoded = re.sub(r"[\x00-\x20]", "", html.unescape(text))
+    if not any("javascript:" in m for _, m in out) and re.search(r"javascript:", decoded, re.I):
+        out.append(("error", "SVG contains a javascript: link (encoded)"))
     try:
         ET.fromstring(b)
     except ET.ParseError as e:
@@ -195,6 +200,8 @@ PDF_BAD = [(rb"/JavaScript\b|/JS\b", "embeds JavaScript"), (rb"/OpenAction\b", "
 
 
 def check_pdf(p, b, out):
+    # Evasion: PDF names may spell letters as #xx hex (/Open#41ction = /OpenAction).
+    b = re.sub(rb"#([0-9A-Fa-f]{2})", lambda m: bytes([int(m.group(1), 16)]), b)
     for rx, why in PDF_BAD:
         if re.search(rx, b):
             out.append(("error", f"PDF {why}"))
