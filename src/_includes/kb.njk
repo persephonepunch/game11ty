@@ -39,6 +39,11 @@
 .doc section{scroll-margin-top:60px}
 .doc h2,.doc h3{scroll-margin-top:60px}
 .docfoot{max-width:none}
+.hero-fig{margin:28px 0 0}
+.hero-fig img{display:block;width:100%;height:auto;border:1px solid var(--g3);background:var(--paper)}
+.hero-fig figcaption{margin-top:8px;font:12px/1.5 var(--mono);letter-spacing:.04em;color:var(--g5)}
+.hero-fig figcaption a{color:var(--g5)}
+.hero .summary{max-width:none}
 @media (max-width:1000px){
   .kbgrid{grid-template-columns:minmax(0,1fr);padding:0 20px;gap:0}
   .kbnav{position:static;height:auto;max-height:300px;border-right:0;border-bottom:1px solid var(--g2);padding:24px 0}
@@ -68,7 +73,11 @@
     <header class="hero">
       <span class="kicker">{{ kicker }}</span>
       <h1>{{ title }}</h1>
-      <p class="sub">{{ description }}</p>
+      <figure class="hero-fig">
+        <a href="{{ heroImage }}"><img src="{{ heroImage }}" width="1600" height="900" alt="{{ ogImageAlt }}" fetchpriority="high"></a>
+        <figcaption>The build board behind this article. <a href="{{ pdfUrl }}" download>Download the full-resolution PDF</a>.</figcaption>
+      </figure>
+      <p class="sub summary"><b>Summary.</b> {{ summary }}</p>
       <div class="meta"><span>Status: <b>{{ status }}</b></span></div>
       <div class="meta"><span>Scope: <b>{{ scope }}</b></span></div>
       <div class="meta"><span>Updated <b>2026-10-03</b></span><span><a href="{{ pdfUrl }}" download>Download the PDF</a> (8.9 MB)</span><span><a href="{{ markdownUrl }}" download>Markdown</a></span><span><a href="{{ sourceUrl }}" target="_blank" rel="noopener">GitHub source</a></span></div>

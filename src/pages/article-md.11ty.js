@@ -18,11 +18,13 @@ flowchart LR
 export function render({ site }) {
   const src = readFileSync("src/pages/article.md", "utf8")
   const [, fm, body] = src.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/)
-  const title = fm.match(/^title: "(.*)"$/m)[1]
+  const field = (k) => fm.match(new RegExp(`^${k}: "(.*)"$`, "m"))[1]
+  const title = field("title")
   const md = body
     .replaceAll('<input type="checkbox" disabled> ', "[ ] ")
     // site-relative links break once the file is downloaded: make them absolute
     .replace(/\]\(\/(?!\/)/g, `](${site.url}/`)
     .replace(/(!\[[^\]]*\]\([^)]*pipeline-diagram\.png\))/, `$1\n\n${PIPELINE}`)
-  return `# ${title}\n\n${md}`
+  const lead = `![${field("ogImageAlt")}](${site.url}${field("heroImage")})\n\n**Summary.** ${field("summary")}\n\n`
+  return `# ${title}\n\n${lead}${md}`
 }
