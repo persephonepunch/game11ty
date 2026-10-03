@@ -19,6 +19,8 @@ Search engines, asset managers and AI models decide what an image shows, and who
 
 This article explains each layer, the Adobe XMP standard behind embedded metadata, how it's stored in JPG, PNG and WebP, and how rights fields act as a lightweight form of DRM. It ends with a worked example, the game11ty site, and a checklist for agencies and media teams.
 
+**Companion article:** [Asset Management, Security and AI](https://www.crm-sync.dev/pages/knowledge-base#what-survives-the-transform) on the CRM Sync knowledge base — the media manager's view of the same pipeline: what a re-encode destroys and what it protects, raster and mesh compression including Draco and KTX2, and where media should live.
+
 
 ## Three layers, one description
 
@@ -725,6 +727,7 @@ exiftool -overwrite_original -XMP-xmpMM:all= photo.jpg
 - [Adobe: export 3D vector artwork in Illustrator](https://helpx.adobe.com/illustrator/desktop/special-effects-styles/create-3d-graphics/export-3d-vector-artwork.html)
 - [Adobe: Substance 3D Stager import and export formats](https://helpx.adobe.com/substance-3d-stager/getting-started/import-export-formats.html)
 - [Adobe: Media Encoder export settings reference](https://helpx.adobe.com/media-encoder/using/export-settings-reference.html), [Adobe community: XMP embed disabled for MP4](https://community.adobe.com/questions-729/embed-xmp-metadata-in-output-file-options-are-disabled-for-mp4-1341890) and [Annenberg Digital Lounge: compress video for the web with Media Encoder](https://annenbergdl.org/compress-video-for-the-web-with-media-encoder/)
+- [CRM Sync knowledge base: Asset Management, Security and AI](https://www.crm-sync.dev/pages/knowledge-base#what-survives-the-transform) (companion article)
 - [Wikipedia: OpenAI–HuggingFace incident](https://en.wikipedia.org/wiki/OpenAI%E2%80%93HuggingFace_incident)
 - [Cloudflare: allow traffic from IPs in an allowlist](https://developers.cloudflare.com/waf/custom-rules/use-cases/allow-traffic-from-ips-in-allowlist/), [Xano: encrypting fields](https://www.xano.com/learn/Encrypting-Fields-Database/) and [Xano: Addons](https://docs.xano.com/building/logic/addons)
 - [Wikipedia: List of file signatures](https://en.wikipedia.org/wiki/List_of_file_signatures), [Gary Kessler: File Signatures Table](https://www.garykessler.net/library/file_sigs.html), [MDN: MIME types](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/MIME_types) and [WHATWG MIME Sniffing](https://mimesniff.spec.whatwg.org/)
