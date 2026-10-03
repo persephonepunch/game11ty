@@ -2,6 +2,7 @@ import { HtmlBasePlugin } from "@11ty/eleventy"
 
 export default function (eleventyConfig) {
   eleventyConfig.addPassthroughCopy("src/assets")
+  eleventyConfig.addPassthroughCopy("src/docs")
   // GitHub Pages serves this under /game11ty/; the plugin prefixes the
   // root-absolute /assets/... URLs that sync.py writes.
   eleventyConfig.addPlugin(HtmlBasePlugin)
