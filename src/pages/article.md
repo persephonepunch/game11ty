@@ -257,6 +257,10 @@ TLS protects data only while it moves, and encryption at rest protects it only w
 
 A decision ladder is a fixed set of questions asked in order. A file or request climbs one rung at a time and stops at the first "no", so every outcome has a known reason.
 
+![Decision ladders. At publish: 1 type matches its name, 2 well-formed for type, 3 rights data agree, each no leads to Block; 4 rule, list or key edit, yes leads to Human review, no leads to 5 Publish with the hash recorded. At unfurl: 1 verified preview bot, yes leads to 2 serve public view only; no leads to 3 signed-in user on TLS, yes leads to 4 serve the account's files, no leads to Block.](/docs/decision-ladders.png)
+
+Green boxes are the only ways through; every other path ends at a block or a human review.
+
 **At publish:**
 
 1. Does the file's real type (magic bytes) match its name? No → block.

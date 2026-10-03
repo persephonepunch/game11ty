@@ -15,6 +15,27 @@ flowchart LR
   build --> pages["GitHub Pages<br/>deployed on every push"]
 \`\`\``
 
+
+const LADDERS = `\`\`\`mermaid
+flowchart TB
+  subgraph publish["At publish"]
+    p1{"1. Type matches its name?"} -- no --> b1[Block]
+    p1 -- yes --> p2{"2. Well-formed for type?"}
+    p2 -- no --> b2[Block]
+    p2 -- yes --> p3{"3. Rights data agree?"}
+    p3 -- no --> b3[Block]
+    p3 -- yes --> p4{"4. Rule, list or key edit?"}
+    p4 -- yes --> hr[Human review]
+    p4 -- no --> p5["5. Publish, hash recorded"]
+  end
+  subgraph unfurl["At unfurl"]
+    u1{"1. Verified preview bot?"} -- yes --> u2["2. Serve public view only"]
+    u1 -- no --> u3{"3. Signed-in user on TLS?"}
+    u3 -- yes --> u4["4. Serve account's files"]
+    u3 -- no --> ub[Block]
+  end
+\`\`\``
+
 export function render({ site }) {
   const src = readFileSync("src/pages/article.md", "utf8")
   const [, fm, body] = src.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/)
@@ -25,6 +46,7 @@ export function render({ site }) {
     // site-relative links break once the file is downloaded: make them absolute
     .replace(/\]\(\/(?!\/)/g, `](${site.url}/`)
     .replace(/(!\[[^\]]*\]\([^)]*pipeline-diagram\.png\))/, `$1\n\n${PIPELINE}`)
+    .replace(/(!\[[^\]]*\]\([^)]*decision-ladders\.png\))/, `$1\n\n${LADDERS}`)
   const lead = `![${field("ogImageAlt")}](${site.url}${field("heroImage")})\n\n**Summary.** ${field("summary")}\n\n`
   return `# ${title}\n\n${lead}${md}`
 }
