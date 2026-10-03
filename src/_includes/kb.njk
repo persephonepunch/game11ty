@@ -8,10 +8,17 @@
 <meta property="og:type" content="article">
 <meta property="og:title" content="{{ title }}">
 <meta property="og:description" content="{{ description }}">
-<meta property="og:image" content="{{ site.url }}/docs/pipeline-diagram.png">
-<meta property="og:image:alt" content="Pipeline diagram: Webflow site to sync.py to postsync.py to Eleventy build to GitHub Pages">
+<meta property="og:url" content="{{ site.url }}/article/">
+<meta property="og:image" content="{{ site.url }}{{ ogImage }}">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="{{ ogImageAlt }}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="{{ site.url }}{{ ogImage }}">
+<meta name="twitter:image:alt" content="{{ ogImageAlt }}">
 <link href="/favicon.ico" rel="icon" sizes="16x16 32x32 48x48">
-<script type="application/ld+json">{{ { "@context": "https://schema.org", "@type": "TechArticle", "headline": title, "description": description, "url": site.url + "/article/", "dateModified": "2026-10-03", "image": site.url + "/docs/pipeline-diagram.png", "encoding": [{ "@type": "MediaObject", "encodingFormat": "application/pdf", "contentUrl": site.url + pdfUrl }, { "@type": "MediaObject", "encodingFormat": "text/markdown", "contentUrl": site.url + markdownUrl }] } | dump | safe }}</script>
+<script type="application/ld+json">{{ { "@context": "https://schema.org", "@type": "TechArticle", "headline": title, "description": description, "url": site.url + "/article/", "dateModified": "2026-10-03", "image": { "@type": "ImageObject", "url": site.url + ogImage, "width": 1200, "height": 630, "description": ogImageAlt }, "encoding": [{ "@type": "MediaObject", "encodingFormat": "application/pdf", "contentUrl": site.url + pdfUrl }, { "@type": "MediaObject", "encodingFormat": "text/markdown", "contentUrl": site.url + markdownUrl }] } | dump | safe }}</script>
 <!-- CRM Sync reference-doc design system (one canonical source) -->
 <link rel="stylesheet" href="https://persephonepunch.github.io/crm-sync-setup/doc.css">
 <style>

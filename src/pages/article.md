@@ -6,6 +6,8 @@ scope: "How descriptions and rights travel with media files, from alt text to XM
 markdownUrl: "/docs/alt-xmp-favicons.md"
 sourceUrl: "https://github.com/persephonepunch/game11ty/blob/main/src/pages/article.md"
 pdfUrl: "/docs/gamestreaming-xmpdata.pdf"
+ogImage: "/docs/og-mediaxmp.jpg"
+ogImageAlt: "Build board for the article: screenshots of the game11ty GitHub repo, the OMEN x Valorant page, code previews, game stream captures, CLO 3D and Adobe metadata dialogs, favicons and XMP data notes"
 permalink: "/article/"
 title: "ALT, XMP and Favicons: Image Metadata for Rights and Media Management"
 description: "How alt text, embedded XMP and favicons carry descriptions and rights for search engines, DAMs and AI models, with JPG, PNG, WebP, glTF and Draco examples."
