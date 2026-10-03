@@ -12,6 +12,7 @@ Then:
 
     python3 -m venv .venv && .venv/bin/pip install beautifulsoup4 requests lxml
     .venv/bin/python sync.py
+    .venv/bin/python postsync.py   # re-applies alt text, XMP, JSON-LD, favicon.ico
     npm install && npm run build
 
 `--site` / `--out` / `--limit` / `--hoist-partial-scripts` override the file for
@@ -52,3 +53,10 @@ Read the `! trailing scripts missing from some pages` warning before deciding.
 ## Before deploying
 
 Set `src/_data/site.json` -> `url` (used to make og:image absolute).
+
+## postsync.py
+
+sync.py regenerates the templates from Webflow, so the additions on top live
+in `postsync.py`, driven by `src/_data/images.json` (alt text per image) and
+`site.json` -> `rights`. Run it after every sync. Edit alt text in
+images.json, not in the templates. Needs `exiftool` and Pillow.

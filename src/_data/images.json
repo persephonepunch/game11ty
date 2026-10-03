@@ -1,42 +1,53 @@
 [
   {
     "src": "/assets/68bf1afa86e3642f126ff8f4_omenfeature1_0003.jpg",
-    "alt": "Inside the OMEN 35L Valorant special edition desktop: red-lit cooling fans behind the tempered-glass side panel."
+    "title": "OMEN x Valorant desktop interior",
+    "alt": "Inside the OMEN 35L Valorant special edition desktop: red-lit cooling fans behind the tempered-glass side panel.",
+    "og": true
   },
   {
     "src": "/assets/68c30affd3eadb8c5bd9dbf1_valorantwhitelogo.png",
+    "title": "Valorant Champions Paris logo",
     "alt": "Valorant Champions Paris logo"
   },
   {
     "src": "/assets/68c30b0d1744bb91de5d824e__omenwhite.svg",
+    "title": "OMEN logo",
     "alt": "OMEN logo"
   },
   {
     "src": "/assets/68c30c472951e964fb9f3727_omensilo.png",
+    "title": "OMEN 35L Valorant desktop",
     "alt": "OMEN 35L Valorant Gaming Desktop Special Edition with two lit front fans"
   },
   {
     "src": "/assets/68c30c972289c6740a1d36b1_valorantparis.png",
+    "title": "Valorant Champions Paris artwork",
     "alt": "Valorant Champions Paris artwork: Born to Burn, Sep 12 – Oct 5, 2025, Paris, France"
   },
   {
     "src": "/assets/68c3332acd3722a34763d641_redicon.png",
+    "title": "Valorant Champions emblem",
     "alt": "Red Valorant Champions emblem"
   },
   {
     "src": "/assets/68bf1afa2fe7db441e078fc7_omentrio2_0014.jpg",
+    "title": "Bundles for FPS Games",
     "alt": "Bundles for FPS Games: HyperX headset, microphone, keyboard and mouse on a desk"
   },
   {
     "src": "/assets/68bf1afa06e92e1845b44260_omentrio4.jpg",
+    "title": "Gear for Valorant",
     "alt": "Gear for Valorant: player at an OMEN desktop with red-lit fans"
   },
   {
     "src": "/assets/68c3ef1e342e4c8776bc7e04_hyperx_flipcast_homepage_hero_2880x1300--1---1.png",
+    "title": "New Releases",
     "alt": "New Releases: HyperX microphone and gaming gear beside a monitor"
   },
   {
     "src": "/assets/68bf1afa071bc03950693794_OmenRiotGames.jpg",
+    "title": "OMEN, HyperX and Riot Games",
     "alt": "OMEN, HyperX and Riot Games partnership artwork for Valorant"
   }
 ]

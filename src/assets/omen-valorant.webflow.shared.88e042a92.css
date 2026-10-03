@@ -278,6 +278,28 @@ input.w-button {
   -webkit-appearance: button;
 }
 
+:where(button.w-popover-trigger) {
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  line-height: inherit;
+  text-align: inherit;
+  -webkit-text-decoration: inherit;
+  text-decoration: inherit;
+  background-color: #0000;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.w-popover {
+  position-anchor: none;
+}
+
+.w-popover[popover]:not(:popover-open) {
+  display: none;
+}
+
 html[data-w-dynpage] [data-w-cloak] {
   color: #0000 !important;
 }
@@ -288,6 +310,10 @@ html[data-w-dynpage] [data-w-cloak] {
 
 pre.w-code-block code {
   all: inherit;
+}
+
+pre.w-code-block code > span {
+  display: block !important;
 }
 
 .w-optimization {
@@ -352,11 +378,11 @@ pre.w-code-block code {
   opacity: 1 !important;
   z-index: 2147483647 !important;
   color: #aaadb0 !important;
+  width: auto !important;
+  height: auto !important;
   overflow: unset !important;
   background-color: #fff !important;
   border-radius: 3px !important;
-  width: auto !important;
-  height: auto !important;
   margin: 0 !important;
   padding: 6px !important;
   font-size: 12px !important;
@@ -1231,10 +1257,10 @@ textarea.w-input, textarea.w-select {
 }
 
 .w-slider-nav.w-num > div {
-  font-size: inherit;
-  line-height: inherit;
   width: auto;
   height: auto;
+  font-size: inherit;
+  line-height: inherit;
   padding: .2em .5em;
 }
 
@@ -1399,12 +1425,6 @@ textarea.w-input, textarea.w-select {
 
 .w-dropdown-link:focus {
   outline: 0;
-}
-
-@media screen and (max-width: 767px) {
-  .w-nav-brand {
-    padding-left: 10px;
-  }
 }
 
 .w-lightbox-backdrop {
@@ -2252,9 +2272,9 @@ a {
 }
 
 .paragraph-gotham {
+  max-width: 55rem;
   font-family: var(--_omenfonts---gotham);
   color: var(--_omenfonts---white);
-  max-width: 55rem;
   font-size: 105%;
   font-weight: 300;
   line-height: 130%;
@@ -2791,13 +2811,13 @@ a {
 
   .omenherotitlewrap {
     background-color: var(--_omenfonts---dark);
+    height: 300px;
+    min-height: auto;
     font-family: var(--_omenfonts---gotham);
     color: var(--_omenfonts---white);
     flex-flow: column;
     justify-content: center;
     align-items: center;
-    height: 300px;
-    min-height: auto;
     display: flex;
     position: absolute;
     inset: auto 0% 0%;

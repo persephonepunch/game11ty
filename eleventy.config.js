@@ -3,7 +3,6 @@ import { HtmlBasePlugin } from "@11ty/eleventy"
 export default function (eleventyConfig) {
   eleventyConfig.addPassthroughCopy("src/assets")
   eleventyConfig.addPassthroughCopy("src/docs")
-  eleventyConfig.addPassthroughCopy("src/icons")
   eleventyConfig.addPassthroughCopy("src/favicon.ico")
   // GitHub Pages serves this under /game11ty/; the plugin prefixes the
   // root-absolute /assets/... URLs that sync.py writes.
@@ -15,6 +14,7 @@ export default function (eleventyConfig) {
     images.map((img) => ({
       "@type": "ImageObject",
       contentUrl: siteUrl + img.src,
+      name: img.title,
       description: img.alt,
       caption: img.alt,
       copyrightNotice: rights.notice,
