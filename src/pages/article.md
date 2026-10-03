@@ -235,6 +235,25 @@ Each of these is a run of `u8` integers, 0–255: the same type Rust uses for pi
 
 Magic bytes only prove what kind of file it is, not that it's safe. A file can carry a valid signature and still be malformed or hostile, which is why the scan goes on to check structure, bounds and active content. The order matters: confirm the type from the bytes first, then validate it as that type.
 
+**See it for yourself.** On a Mac or Linux terminal, `xxd -l 16 file.png` prints a file's first 16 bytes, and `file file.png` names the type it finds:
+
+```
+$ xxd -l 16 favicon256.png
+00000000: 8950 4e47 0d0a 1a0a 0000 000d 4948 4452  .PNG........IHDR
+$ file favicon256.png
+favicon256.png: PNG image data, 32 x 32, 8-bit/color RGBA, non-interlaced
+```
+
+Two details trip people up. The signature isn't always at byte 0: WebP starts with `RIFF` and only says `WEBP` at byte 8, which is why signature tables list an *offset*. And a match proves the type, not that the file is safe.
+
+**Further reading, simplest first:**
+
+- [Wikipedia: List of file signatures](https://en.wikipedia.org/wiki/List_of_file_signatures): the most cited table, with hex, text and offset for hundreds of formats
+- [Gary Kessler's File Signatures Table](https://www.garykessler.net/library/file_sigs.html): the long-standing digital-forensics reference, listed by extension
+- [MDN: MIME types](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/MIME_types): plain-language guide to `Content-Type`, and why it can disagree with the bytes
+- [WHATWG MIME Sniffing standard](https://mimesniff.spec.whatwg.org/): the official rules browsers follow when they guess a type from the bytes
+- `man file` and `man magic`: built into macOS and Linux; the `file` command's signature database is called *magic*, which is where the name comes from
+
 ## Publish and unfurl protection: a spec for the CRM Sync stack
 
 This section is a plan, written as an agile spec that people and AI assistants can both work from. It applies the release scan to assets published through CRM Sync, which runs on Cloudflare and Xano. game11ty's scan is the working reference; the rest is not built yet.
@@ -306,6 +325,40 @@ AI can draft any change. A person approves the ones that change who gets in or h
 | Rights record | Draft from file metadata | Confirm the owner |
 
 Keep the spec, its tests and the review record in the repository next to the code, so every change can be traced to a story, a test and an approver.
+
+### Magic bytes across CRM Sync: Shopify, Webflow and Xano
+
+In CRM Sync, the magic-byte check belongs in one place: the Cloudflare Worker that every upload and every file request already passes through. Not in a Shopify theme, a Webflow template or a page script. That makes the protection **theme-agnostic**: a merchant can switch Shopify themes or redesign a Webflow site, and every file is still checked, because the check never lived in the theme.
+
+In plain words: the theme decides how a file *looks* on the page. The Worker decides whether the file is *allowed to exist* and how it is *labelled* when it's served. Keeping those apart means a design change can't switch security off.
+
+**Upload path, the same for every platform:**
+
+1. A file arrives at the Worker: from the Shopify app, a Webflow Designer extension, or a Xano admin screen.
+2. The Worker reads the first bytes and detects the real type. The type must be on that destination's allow list, e.g. images and GLB for products, PDF for documents. Executables are never allowed.
+3. The Worker records the detected type, the SHA-256 hash and the rights fields in the asset's Xano row, with sensitive fields encrypted.
+4. Only then does the Worker request an upload slot from the platform. Both platforms upload in two steps, so the check runs before anything reaches them, and the file name's extension is set from the *detected* type, never the original name.
+5. When the file is served through Cloudflare, the Worker sets `Content-Type` from the recorded type and adds `X-Content-Type-Options: nosniff`, so browsers trust the checked label instead of guessing. That's the header GitHub Pages doesn't send for game11ty.
+
+**Forms have MIME types too.** An HTML form declares how it sends data in its `enctype`, which is itself a MIME type:
+
+| Form encoding (MIME type) | Used for | What to trust |
+| --- | --- | --- |
+| `application/x-www-form-urlencoded` | Plain text fields; the default | Validate each field's value |
+| `multipart/form-data` | Any form with a file upload | Each file part carries its own `Content-Type`, guessed by the browser from the file name. It's a label from the uploader, so the Worker ignores it and reads the magic bytes |
+| `text/plain` | Rare; debugging | Treat as untrusted text |
+| `application/json` | `fetch()` calls from apps and extensions, not HTML forms | Validate against a schema |
+
+So the Worker checks the request's form type first, then each file part's real bytes. A part labelled `image/png` that starts with `MZ` is rejected, whatever the form said.
+
+| Platform | Where files enter | Two-step upload | What the Worker controls |
+| --- | --- | --- | --- |
+| Shopify | App, Admin API | [`stagedUploadsCreate`](https://shopify.dev/docs/api/admin-graphql/latest/mutations/stageduploadscreate), then [`fileCreate`](https://shopify.dev/docs/api/admin-graphql/latest/mutations/fileCreate) | The bytes and type before a staged target is requested |
+| Webflow | Designer extension, Data API | [Create asset](https://developers.webflow.com/data/reference/assets/assets/create) (file name and MD5), then upload to a presigned URL | The file name's extension and the hash Webflow checks |
+| Xano | Admin screens, API | Stores the asset row | Detected type, hash, rights record (Addon), encrypted fields |
+| Cloudflare | Every request | Not applicable | `Content-Type`, `nosniff`, allow list, TLS |
+
+This part of the spec isn't built or checked against the CRM Sync code yet; it describes where the check should sit.
 
 ## Rights metadata as lightweight DRM
 
@@ -578,5 +631,7 @@ exiftool -overwrite_original -XMP-xmpMM:all= photo.jpg
 - [Adobe: Media Encoder export settings reference](https://helpx.adobe.com/media-encoder/using/export-settings-reference.html), [Adobe community: XMP embed disabled for MP4](https://community.adobe.com/questions-729/embed-xmp-metadata-in-output-file-options-are-disabled-for-mp4-1341890) and [Annenberg Digital Lounge: compress video for the web with Media Encoder](https://annenbergdl.org/compress-video-for-the-web-with-media-encoder/)
 - [Wikipedia: OpenAI–HuggingFace incident](https://en.wikipedia.org/wiki/OpenAI%E2%80%93HuggingFace_incident)
 - [Cloudflare: allow traffic from IPs in an allowlist](https://developers.cloudflare.com/waf/custom-rules/use-cases/allow-traffic-from-ips-in-allowlist/), [Xano: encrypting fields](https://www.xano.com/learn/Encrypting-Fields-Database/) and [Xano: Addons](https://docs.xano.com/building/logic/addons)
+- [Wikipedia: List of file signatures](https://en.wikipedia.org/wiki/List_of_file_signatures), [Gary Kessler: File Signatures Table](https://www.garykessler.net/library/file_sigs.html), [MDN: MIME types](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/MIME_types) and [WHATWG MIME Sniffing](https://mimesniff.spec.whatwg.org/)
+- [Shopify: stagedUploadsCreate](https://shopify.dev/docs/api/admin-graphql/latest/mutations/stageduploadscreate), [Shopify: fileCreate](https://shopify.dev/docs/api/admin-graphql/latest/mutations/fileCreate) and [Webflow: Upload Asset](https://developers.webflow.com/data/reference/assets/assets/create)
 - [How to export Cinema 4D to GLB](https://svilenkovic.com/3d/how-to-export-cinema4d-to-glb)
 - Measurements and parser output: game11ty files, the [live site](https://persephonepunch.github.io/game11ty/) and the CLO jacket and avatar GLBs, 3 October 2026
