@@ -235,6 +235,70 @@ Each of these is a run of `u8` integers, 0–255: the same type Rust uses for pi
 
 Magic bytes only prove what kind of file it is, not that it's safe. A file can carry a valid signature and still be malformed or hostile, which is why the scan goes on to check structure, bounds and active content. The order matters: confirm the type from the bytes first, then validate it as that type.
 
+## Publish and unfurl protection: a spec for the CRM Sync stack
+
+This section is a plan, written as an agile spec that people and AI assistants can both work from. It applies the release scan to assets published through CRM Sync, which runs on Cloudflare and Xano. game11ty's scan is the working reference; the rest is not built yet.
+
+### In plain words
+
+A file is at risk at two moments. **At publish**, when it goes live: a bad or mislabelled file could slip out. **At unfurl**, when someone pastes a link into Slack, iMessage, LinkedIn or X and that app fetches the page and its preview image: anyone can pretend to be one of those apps to scrape files. The protection also has to **hold as the system grows** ("scales horizontally"): more servers, regions and customers, with no gaps between them.
+
+| Layer | What it does, in plain words | Tool |
+| --- | --- | --- |
+| Allow list | A guest list at the door: only known visitors get in | Cloudflare WAF custom rule with an IP or bot list ([Cloudflare](https://developers.cloudflare.com/waf/custom-rules/use-cases/allow-traffic-from-ips-in-allowlist/)) |
+| TLS | A sealed envelope for data while it travels | Cloudflare, on every connection |
+| Field encryption | A locked drawer for sensitive columns in the database | Xano Encrypt filter, AES, key kept in an environment variable ([Xano](https://www.xano.com/learn/Encrypting-Fields-Database/)) |
+| Addons | Staples each asset's rights record to every answer the API gives | Xano Addons, reusable related-data queries ([Xano](https://docs.xano.com/building/logic/addons)) |
+| Release scan | Inspects every file before it goes live | `asset_scan.py`, in an isolated container |
+
+TLS protects data only while it moves, and encryption at rest protects it only while it's stored, so CRM Sync needs both. Its docs already store credentials in Cloudflare's encrypted key-value store, one key per customer, masked in every API response.
+
+### Decision ladders
+
+A decision ladder is a fixed set of questions asked in order. A file or request climbs one rung at a time and stops at the first "no", so every outcome has a known reason.
+
+**At publish:**
+
+1. Does the file's real type (magic bytes) match its name? No → block.
+2. Is the file well-formed for that type: bounds, structure, no active content? No → block.
+3. Does it carry rights data, and do the Xano rights record and the file agree? No → block.
+4. Did this release change a rule, an allow list or a key? Yes → hold for human code review.
+5. Publish, and record the file's hash in the manifest.
+
+**At unfurl:**
+
+1. Is the request on the allow list as a verified preview bot (Slack, Apple, LinkedIn, X), checked with Cloudflare's verified-bot signal, not just the name it claims? No → go to rung 3.
+2. Serve the public page and its share image only. Nothing private, no originals.
+3. Is it a signed-in user over TLS? Yes → serve what their account allows. No → challenge or block.
+
+The ladders run the same way at every Cloudflare location, so adding servers or customers adds no new rules to maintain.
+
+### User stories and tests (TDD)
+
+Each story is written with its test first, in test-driven development (TDD) style. The code is done when its tests pass.
+
+| Story | Given | When | Then |
+| --- | --- | --- | --- |
+| As a publisher, I want mislabelled files stopped | A PNG named `.jpg` | It is published | The release is blocked and the report names the file |
+| As a rights owner, I want my claim on every copy | An asset with a Xano rights record | Any API returns it | The rights record is attached through an Addon |
+| As a brand, I want link previews to work | A verified Slack preview bot | It fetches the article | It gets the page and share image, nothing else |
+| As a security lead, I want scrapers kept out | A bot that only claims to be Slackbot | It fetches an original asset | It is challenged or blocked |
+| As an operator, I want sensitive fields unreadable | A licence contact field in Xano | Someone reads the raw table | They see ciphertext, not the value |
+
+### Code review gates
+
+AI can draft any change. A person approves the ones that change who gets in or how data is locked:
+
+| Change | AI may | Human must |
+| --- | --- | --- |
+| New asset or article | Draft and run the scan | Nothing extra if the scan passes |
+| Scan rule | Draft the rule and its test | Review and approve |
+| Allow list entry | Propose it with evidence | Approve; entries expire and are re-reviewed |
+| Encryption key or algorithm | Never | Rotate keys and approve |
+| Rights record | Draft from file metadata | Confirm the owner |
+
+Keep the spec, its tests and the review record in the repository next to the code, so every change can be traced to a story, a test and an approver.
+
 ## Rights metadata as lightweight DRM
 
 XMP rights fields don't lock an image; they declare who owns it and on what terms, in a form machines act on. Real DRM encrypts content. Rights metadata is closer to a label that travels with the file: it can be stripped, but a crawler, DAM or training pipeline that respects it can read the terms without a human.
@@ -505,5 +569,6 @@ exiftool -overwrite_original -XMP-xmpMM:all= photo.jpg
 - [Adobe: Substance 3D Stager import and export formats](https://helpx.adobe.com/substance-3d-stager/getting-started/import-export-formats.html)
 - [Adobe: Media Encoder export settings reference](https://helpx.adobe.com/media-encoder/using/export-settings-reference.html), [Adobe community: XMP embed disabled for MP4](https://community.adobe.com/questions-729/embed-xmp-metadata-in-output-file-options-are-disabled-for-mp4-1341890) and [Annenberg Digital Lounge: compress video for the web with Media Encoder](https://annenbergdl.org/compress-video-for-the-web-with-media-encoder/)
 - [Wikipedia: OpenAI–HuggingFace incident](https://en.wikipedia.org/wiki/OpenAI%E2%80%93HuggingFace_incident)
+- [Cloudflare: allow traffic from IPs in an allowlist](https://developers.cloudflare.com/waf/custom-rules/use-cases/allow-traffic-from-ips-in-allowlist/), [Xano: encrypting fields](https://www.xano.com/learn/Encrypting-Fields-Database/) and [Xano: Addons](https://docs.xano.com/building/logic/addons)
 - [How to export Cinema 4D to GLB](https://svilenkovic.com/3d/how-to-export-cinema4d-to-glb)
 - Measurements and parser output: game11ty files, the [live site](https://persephonepunch.github.io/game11ty/) and the CLO jacket and avatar GLBs, 3 October 2026
