@@ -408,6 +408,50 @@ The Worker and Xano sit below the template layer. Whether a page is built with L
 
 The rule is the same in every row: the Worker's URL can appear in a template, but its keys never do. One caution for the build-time front ends (Jekyll, Eleventy, static Astro and Next.js): data fetched at build is frozen into the HTML until the next build. Anything that must stay current or private, such as a rights change or a signed-in user's files, should be fetched live through the Worker, not baked in.
 
+### Head code: in the theme, or a higher-order function in the Worker
+
+*Head code* is everything placed in a page's `<head>`: scripts, tracking tags, a content security policy, meta tags. The usual place for it is the theme: Shopify's `theme.liquid`, WordPress's `header.php`, Webflow's custom-code box, an Eleventy or Jekyll layout. The security best practice is to keep only the **look** there and move security into a **higher-order head function** in the Cloudflare Worker.
+
+In plain words: a higher-order function is a function that wraps another one. The Worker's head function takes whatever page the origin sends, from any platform, and returns it hardened: security headers set and the security baseline script added. It's the same idea as [Helmet](https://helmetjs.github.io/), the Express middleware that sets headers such as `Content-Security-Policy` and `Strict-Transport-Security`, but at the edge and for every platform at once.
+
+| | Head code in the theme | Higher-order head function in the Worker |
+| --- | --- | --- |
+| Where it lives | Inside each theme or template | One function at the Cloudflare edge |
+| Who can change it | Anyone with theme or design access | Only a reviewed Worker deploy (the code review gates) |
+| Theme switch or redesign | Lost, or copied by hand into the new theme | Unaffected |
+| Security headers | Only as `<meta>` tags, and some (`frame-ancestors`, HSTS) don't work that way | Real HTTP headers on every response |
+| Same on Shopify, WordPress, Webflow, Astro, Next | No: a separate copy per platform | Yes: one source |
+| Secrets | Easy to paste in by mistake, and public once there | Stay in the Worker's secrets |
+
+In the Higher-Order Stack, the layering CRM Sync is built on, this is a clean split of layers. The theme head carries Layer 2, the per-brand **look**: `theme.css`, fonts, brand tokens. The Worker carries Layer 1, Tier A, the always-on regulatory **baseline**: security headers, the consent gate and the integrity-checked loader that brings in Tier B scripts only where they're needed. It runs on every page and fails closed.
+
+A sketch of the head function. It's an illustration of the pattern, not the CRM Sync code:
+
+```js
+// Higher-order: wraps any fetch handler and returns a hardened response.
+const withHead = (handler) => async (request, env, ctx) => {
+  const res = await handler(request, env, ctx)
+  const out = new Response(res.body, res)
+  const nonce = crypto.randomUUID()
+  out.headers.set("Content-Security-Policy", `default-src 'self'; script-src 'self' 'nonce-${nonce}'; frame-ancestors 'none'`)
+  out.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+  out.headers.set("X-Content-Type-Options", "nosniff")
+  out.headers.set("Referrer-Policy", "strict-origin-when-cross-origin")
+  if (!out.headers.get("content-type")?.includes("text/html")) return out
+  return new HTMLRewriter()
+    .on("head", { element(el) {
+      el.append(`<script src="/embed/stack-loader.js" nonce="${nonce}"></script>`, { html: true })
+    } })
+    .transform(out)
+}
+
+export default { fetch: withHead((request) => fetch(request)) }
+```
+
+Cloudflare's [`HTMLRewriter`](https://developers.cloudflare.com/workers/examples/security-headers/) edits the HTML as it streams, so the theme never needs to know the baseline exists.
+
+**Where the Worker can't sit in front.** Shopify doesn't support a Cloudflare proxy in front of a storefront domain; records pointing to Shopify must be DNS-only ([Cloudflare community](https://community.cloudflare.com/t/your-domain-has-a-cloudflare-proxy-which-is-not-supported-by-shopify/693008)). There, the Worker hardens everything it serves itself (the app proxy route, embeds, APIs and files), and the theme head shrinks to a single loader tag. Check each host's proxy policy before relying on the Worker for its pages.
+
 This part of the spec isn't built or checked against the CRM Sync code yet; it describes where the check should sit.
 
 ## Rights metadata as lightweight DRM
@@ -687,5 +731,6 @@ exiftool -overwrite_original -XMP-xmpMM:all= photo.jpg
 - [Shopify: stagedUploadsCreate](https://shopify.dev/docs/api/admin-graphql/latest/mutations/stageduploadscreate), [Shopify: fileCreate](https://shopify.dev/docs/api/admin-graphql/latest/mutations/fileCreate) and [Webflow: Upload Asset](https://developers.webflow.com/data/reference/assets/assets/create), [WordPress REST API: Media](https://developer.wordpress.org/rest-api/reference/media/)
 - [Shopify: app proxies](https://shopify.dev/docs/apps/build/online-store/app-proxies), [WordPress: HTTP API](https://developer.wordpress.org/plugins/http-api/), [Astro: environment variables](https://docs.astro.build/en/guides/environment-variables/) and [Next.js: environment variables](https://nextjs.org/docs/pages/guides/environment-variables)
 - [RFC 9309: Robots Exclusion Protocol](https://www.rfc-editor.org/rfc/rfc9309), [RFC 9116: security.txt](https://www.rfc-editor.org/rfc/rfc9116), [llmstxt.org](https://llmstxt.org/) and [Google: qualify outbound links](https://developers.google.com/search/docs/crawling-indexing/qualify-outbound-links)
+- [Helmet](https://helmetjs.github.io/), [Cloudflare Workers: set security headers](https://developers.cloudflare.com/workers/examples/security-headers/) and [Cloudflare community: Shopify and the Cloudflare proxy](https://community.cloudflare.com/t/your-domain-has-a-cloudflare-proxy-which-is-not-supported-by-shopify/693008)
 - [How to export Cinema 4D to GLB](https://svilenkovic.com/3d/how-to-export-cinema4d-to-glb)
 - Measurements and parser output: game11ty files, the [live site](https://persephonepunch.github.io/game11ty/) and the CLO jacket and avatar GLBs, 3 October 2026
