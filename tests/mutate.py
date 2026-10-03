@@ -19,6 +19,7 @@ SOURCE = (ROOT / "scripts" / "asset_scan.py").read_text()
 MUTANTS = [
     ("SB-11", "executables allowed", 'if kind in ("exe", "elf"):', "if False:"),
     ("SB-11", "extension never compared to content", "if want and kind != want:", "if False:"),
+    ("SB-11", "unlisted types skipped instead of blocked", 'results[str(p.relative_to(root))] = [("error", f"type {p.suffix or \'(no extension)\'} is not on the allow list")]', "pass"),
     ("SB-11", "PNG signature not recognised", 'if b[:8] == b"\\x89PNG\\r\\n\\x1a\\n": return "png"', "pass"),
     ("SB-12", "SVG <script> rule removed", '(re.compile(r"<\\s*script", re.I), "contains <script>"),', ""),
     ("SB-12", "SVG event-handler rule removed", '(re.compile(r"\\son[a-z]+\\s*=", re.I), "contains an on* event handler"),', ""),

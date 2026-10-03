@@ -224,6 +224,8 @@ None of these stages handles XMP. The metadata sits beside the pixel data, so a 
 
 AI agents should check signatures and rights before trusting a file.
 
+**Two 2026 incidents, one lesson.** In the OpenAI–Hugging Face breach, OpenAI's own test agents got in through a flaw in an HDF5 dataset parser ([Wikipedia](https://en.wikipedia.org/wiki/OpenAI%E2%80%93HuggingFace_incident)). Separately, in July 2026 researchers at Hacktron reached OpenAI's community forum through a heap overflow in libheif, an image parser: the forum software's image check couldn't identify HEIF files, so it handed them to ImageMagick, "exposing the underlying libheif parser directly to attacker-controlled files" ([Hacktron](https://www.hacktron.ai/blog/hacking-openai)). Different parsers, same lesson. ImageMagick is very likely the software resizing your images; the companion article's [ImageMagick section](https://crm-sync.dev/docs/what-survives-the-transform#imagemagick-and-what-a-media-manager-should-require) lists what a media manager should require of it.
+
 **Higher-risk assets.** DAM libraries, 3D models and firmware need extra care: verify by hash or signature, restrict publishing, scan before processing, and install firmware only with a valid signature (secure boot).
 
 ## Release scan
@@ -243,6 +245,8 @@ On a test set of deliberately bad files it caught all 13 planted problems: a PNG
 After the build, CI publishes [`asset-manifest.json`](/asset-manifest.json), a SHA-256 hash of every released file, so a download can be checked against what was scanned.
 
 The lesson behind it is the security note's. In the July 2026 OpenAI–Hugging Face incident, the way in was a flaw in an HDF5 dataset parser running with access to credentials ([Wikipedia](https://en.wikipedia.org/wiki/OpenAI%E2%80%93HuggingFace_incident)). The scan parses untrusted files where nothing can be reached, and treats a file whose content doesn't match its label as an error. Run it locally with `python3 scripts/asset_scan.py src`.
+
+The ImageMagick case shows why the type check is an allow list. The forum's check couldn't recognise HEIF, so instead of rejecting the unknown file it passed it on to a heavier parser. The scan does the opposite: a file type that isn't on its list is an error, never skipped. Writing that rule as a test first showed the scan had been silently skipping unlisted types; it now blocks them, and a mutation test proves it. Hacktron's advice matches the rest of the design: disable formats you don't need, such as HEIF and AVIF, and run image processing in hardened, short-lived sandboxes, using ImageMagick's security policy to restrict accepted formats ([Hacktron](https://www.hacktron.ai/blog/hacking-openai)).
 
 ### Magic bytes: auditing at the core
 
@@ -735,5 +739,6 @@ exiftool -overwrite_original -XMP-xmpMM:all= photo.jpg
 - [Shopify: app proxies](https://shopify.dev/docs/apps/build/online-store/app-proxies), [WordPress: HTTP API](https://developer.wordpress.org/plugins/http-api/), [Astro: environment variables](https://docs.astro.build/en/guides/environment-variables/) and [Next.js: environment variables](https://nextjs.org/docs/pages/guides/environment-variables)
 - [RFC 9309: Robots Exclusion Protocol](https://www.rfc-editor.org/rfc/rfc9309), [RFC 9116: security.txt](https://www.rfc-editor.org/rfc/rfc9116), [llmstxt.org](https://llmstxt.org/) and [Google: qualify outbound links](https://developers.google.com/search/docs/crawling-indexing/qualify-outbound-links)
 - [Helmet](https://helmetjs.github.io/), [Cloudflare Workers: set security headers](https://developers.cloudflare.com/workers/examples/security-headers/) and [Cloudflare community: Shopify and the Cloudflare proxy](https://community.cloudflare.com/t/your-domain-has-a-cloudflare-proxy-which-is-not-supported-by-shopify/693008)
+- [Hacktron: Hacking OpenAI](https://www.hacktron.ai/blog/hacking-openai)
 - [How to export Cinema 4D to GLB](https://svilenkovic.com/3d/how-to-export-cinema4d-to-glb)
 - Measurements and parser output: game11ty files, the [live site](https://persephonepunch.github.io/game11ty/) and the CLO jacket and avatar GLBs, 3 October 2026

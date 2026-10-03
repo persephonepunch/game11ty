@@ -103,6 +103,14 @@ class SB11_ContentIdentity(ScanCase):
     def test_fail_closed_empty_png(self):
         self.assertBlocked("empty.png", b"")
 
+    def test_fail_closed_unlisted_type_is_blocked_not_skipped(self):
+        # The ImageMagick lesson: Discourse's check couldn't identify HEIF and
+        # passed it on to a heavier parser. An allow list blocks what it doesn't know.
+        self.assertBlocked("photo.heic", b"\x00\x00\x00\x18ftypheic" + b"\x00" * 40)
+
+    def test_fail_closed_no_extension_is_blocked(self):
+        self.assertBlocked("payload", b"\x00\x01\x02")
+
 
 class SB12_ActiveContent(ScanCase):
     """No file may carry code that runs: SVG scripts, javascript: links, PDF actions."""

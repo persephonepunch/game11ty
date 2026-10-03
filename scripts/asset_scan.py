@@ -21,9 +21,13 @@ import hashlib, html, json, re, struct, sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+# The allow list. Any other type is an error, not skipped: an unknown file
+# must never slip through to whatever parser handles it later.
 SCANNED = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg", ".glb", ".gltf",
-           ".pdf", ".ico", ".css", ".js", ".json", ".md", ".bin", ".woff", ".woff2"}
-TEXT = {".css", ".js", ".json", ".md", ".gltf"}
+           ".pdf", ".ico", ".css", ".js", ".json", ".md", ".bin", ".woff", ".woff2",
+           ".njk", ".html", ".txt"}
+TEXT = {".css", ".js", ".json", ".md", ".gltf", ".njk", ".html", ".txt"}
+IGNORED = {".DS_Store", ".gitkeep"}  # local housekeeping files, never published content
 RASTER = {".jpg", ".jpeg", ".png", ".webp"}
 # exporters that stamp their own copyright on other people's models
 TOOL_COPYRIGHT = re.compile(r"\(c\)\s*Adobe Inc\.", re.I)
@@ -212,7 +216,10 @@ def check_pdf(p, b, out):
 def scan(root: Path):
     results = {}
     for p in sorted(root.rglob("*")):
-        if not p.is_file() or p.suffix.lower() not in SCANNED:
+        if not p.is_file() or p.name in IGNORED:
+            continue
+        if p.suffix.lower() not in SCANNED:
+            results[str(p.relative_to(root))] = [("error", f"type {p.suffix or '(no extension)'} is not on the allow list")]
             continue
         b, out = p.read_bytes(), []
         check_type(p, b, out)
