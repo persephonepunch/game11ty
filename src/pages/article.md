@@ -326,18 +326,18 @@ AI can draft any change. A person approves the ones that change who gets in or h
 
 Keep the spec, its tests and the review record in the repository next to the code, so every change can be traced to a story, a test and an approver.
 
-### Magic bytes across CRM Sync: Shopify, Webflow and Xano
+### Magic bytes across CRM Sync: Shopify, WordPress, Webflow and Xano
 
-In CRM Sync, the magic-byte check belongs in one place: the Cloudflare Worker that every upload and every file request already passes through. Not in a Shopify theme, a Webflow template or a page script. That makes the protection **theme-agnostic**: a merchant can switch Shopify themes or redesign a Webflow site, and every file is still checked, because the check never lived in the theme.
+In CRM Sync, the magic-byte check belongs in one place: the Cloudflare Worker that every upload and every file request already passes through. Not in a Shopify theme, a WordPress theme, a Webflow template or a page script. That makes the protection **theme-agnostic**: a merchant can switch Shopify or WordPress themes or redesign a Webflow site, and every file is still checked, because the check never lived in the theme.
 
 In plain words: the theme decides how a file *looks* on the page. The Worker decides whether the file is *allowed to exist* and how it is *labelled* when it's served. Keeping those apart means a design change can't switch security off.
 
 **Upload path, the same for every platform:**
 
-1. A file arrives at the Worker: from the Shopify app, a Webflow Designer extension, or a Xano admin screen.
+1. A file arrives at the Worker: from the Shopify app, a WordPress plugin, a Webflow Designer extension, or a Xano admin screen.
 2. The Worker reads the first bytes and detects the real type. The type must be on that destination's allow list, e.g. images and GLB for products, PDF for documents. Executables are never allowed.
 3. The Worker records the detected type, the SHA-256 hash and the rights fields in the asset's Xano row, with sensitive fields encrypted.
-4. Only then does the Worker request an upload slot from the platform. Both platforms upload in two steps, so the check runs before anything reaches them, and the file name's extension is set from the *detected* type, never the original name.
+4. Only then does the Worker request an upload slot from the platform. Shopify and Webflow upload in two steps and WordPress in one; either way the check runs before anything reaches them, and the file name's extension is set from the *detected* type, never the original name.
 5. When the file is served through Cloudflare, the Worker sets `Content-Type` from the recorded type and adds `X-Content-Type-Options: nosniff`, so browsers trust the checked label instead of guessing. That's the header GitHub Pages doesn't send for game11ty.
 
 **Forms have MIME types too.** An HTML form declares how it sends data in its `enctype`, which is itself a MIME type:
@@ -351,12 +351,15 @@ In plain words: the theme decides how a file *looks* on the page. The Worker dec
 
 So the Worker checks the request's form type first, then each file part's real bytes. A part labelled `image/png` that starts with `MZ` is rejected, whatever the form said.
 
-| Platform | Where files enter | Two-step upload | What the Worker controls |
+| Platform | Where files enter | Upload steps | What the Worker controls |
 | --- | --- | --- | --- |
-| Shopify | App, Admin API | [`stagedUploadsCreate`](https://shopify.dev/docs/api/admin-graphql/latest/mutations/stageduploadscreate), then [`fileCreate`](https://shopify.dev/docs/api/admin-graphql/latest/mutations/fileCreate) | The bytes and type before a staged target is requested |
-| Webflow | Designer extension, Data API | [Create asset](https://developers.webflow.com/data/reference/assets/assets/create) (file name and MD5), then upload to a presigned URL | The file name's extension and the hash Webflow checks |
+| Shopify | App, Admin API | Two: [`stagedUploadsCreate`](https://shopify.dev/docs/api/admin-graphql/latest/mutations/stageduploadscreate), then [`fileCreate`](https://shopify.dev/docs/api/admin-graphql/latest/mutations/fileCreate) | The bytes and type before a staged target is requested |
+| WordPress | Plugin, REST API | One: [`POST /wp-json/wp/v2/media`](https://developer.wordpress.org/rest-api/reference/media/), file in the body, name in `Content-Disposition` | The file name and `Content-Type` sent with the upload |
+| Webflow | Designer extension, Data API | Two: [create asset](https://developers.webflow.com/data/reference/assets/assets/create) (file name and MD5), then upload to a presigned URL | The file name's extension and the hash Webflow checks |
 | Xano | Admin screens, API | Stores the asset row | Detected type, hash, rights record (Addon), encrypted fields |
 | Cloudflare | Every request | Not applicable | `Content-Type`, `nosniff`, allow list, TLS |
+
+**Plain POST and GET to Xano.** Between the Worker and Xano there's no SDK or extra security vendor, just HTTPS requests: POST to send data such as uploads and rights records, GET to read it. Xano is still a hosted service, so the security comes from what each endpoint enforces: sign-in, input checks, Addons and encrypted fields. Two rules keep it safe. Never put secrets or personal data in a GET URL, because servers and browsers log URLs; send them in a POST body. And keep the Xano API key in the Worker's secrets, never in a theme or page script, so it stays protected whatever theme or site builder is in front.
 
 This part of the spec isn't built or checked against the CRM Sync code yet; it describes where the check should sit.
 
@@ -632,6 +635,6 @@ exiftool -overwrite_original -XMP-xmpMM:all= photo.jpg
 - [Wikipedia: OpenAI–HuggingFace incident](https://en.wikipedia.org/wiki/OpenAI%E2%80%93HuggingFace_incident)
 - [Cloudflare: allow traffic from IPs in an allowlist](https://developers.cloudflare.com/waf/custom-rules/use-cases/allow-traffic-from-ips-in-allowlist/), [Xano: encrypting fields](https://www.xano.com/learn/Encrypting-Fields-Database/) and [Xano: Addons](https://docs.xano.com/building/logic/addons)
 - [Wikipedia: List of file signatures](https://en.wikipedia.org/wiki/List_of_file_signatures), [Gary Kessler: File Signatures Table](https://www.garykessler.net/library/file_sigs.html), [MDN: MIME types](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/MIME_types) and [WHATWG MIME Sniffing](https://mimesniff.spec.whatwg.org/)
-- [Shopify: stagedUploadsCreate](https://shopify.dev/docs/api/admin-graphql/latest/mutations/stageduploadscreate), [Shopify: fileCreate](https://shopify.dev/docs/api/admin-graphql/latest/mutations/fileCreate) and [Webflow: Upload Asset](https://developers.webflow.com/data/reference/assets/assets/create)
+- [Shopify: stagedUploadsCreate](https://shopify.dev/docs/api/admin-graphql/latest/mutations/stageduploadscreate), [Shopify: fileCreate](https://shopify.dev/docs/api/admin-graphql/latest/mutations/fileCreate) and [Webflow: Upload Asset](https://developers.webflow.com/data/reference/assets/assets/create), [WordPress REST API: Media](https://developer.wordpress.org/rest-api/reference/media/)
 - [How to export Cinema 4D to GLB](https://svilenkovic.com/3d/how-to-export-cinema4d-to-glb)
 - Measurements and parser output: game11ty files, the [live site](https://persephonepunch.github.io/game11ty/) and the CLO jacket and avatar GLBs, 3 October 2026
