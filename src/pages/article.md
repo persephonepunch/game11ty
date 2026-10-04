@@ -542,6 +542,62 @@ The limits: registers and C libraries still need `unsafe`, which Rust shrinks bu
 
 Selling a connected thermometer or printer into the EU or UK makes device security a legal obligation, whether it's sold through Shopify or not.
 
+## Concurrency, permissions and regulated data: an AI-shaped design
+
+This section is also a plan. It settles four questions every layer above has to answer the same way: what Rust can and can't prevent, where permissions live, where each class of regulated data may go, and how infrastructure changes when AI agents act inside it.
+
+### Data races and race conditions
+
+Rust prevents one kind of timing bug and not the other.
+
+| | Data race | Race condition |
+| --- | --- | --- |
+| What it is | Two threads touch the same memory at once, at least one writing, with no coordination; memory is corrupted | The outcome depends on timing, even though memory stays safe |
+| Example | A device's sensor task and network task write one buffer at the same time | Two "ink 8%" readings a second apart both trigger a reorder |
+| Prevented by Rust? | **Yes, at compile time.** Ownership and the `Send`/`Sync` rules reject unsafe sharing | **No.** It's logic across requests, often across machines |
+| Who fixes it | The compiler | The database: an **idempotency key** with a **unique index** (one reorder per device per low-ink event) and **conditional updates** ("only if no open reorder exists") |
+
+AI agents make race conditions more common: they retry, run in parallel and repeat themselves. Every action an agent can trigger needs an idempotency key, so the second attempt is refused by the database, not by luck.
+
+### Permissions: claims and entitlements, not token extras
+
+Xano's authentication tokens are encrypted JWE tokens, and their *extras* can carry data such as a user's role ([Xano](https://docs.xano.com/building-backend-features/user-authentication-and-user-data)). Extras are written when the token is created and last until it expires, so they're a snapshot.
+
+| Use | Where it lives | Why |
+| --- | --- | --- |
+| Fast, low-risk checks: role for the interface, tenant, plan tier | Token extras | No lookup per request; encrypted, so the client can't read or change them |
+| Anything revocable or high-stakes: orders, payments, firmware downloads, rights changes | Claims and entitlements in Xano tables, re-checked on every request | A refund or a withdrawn consent can't be pulled back out of an issued token |
+| Device and agent actions | The device or agent record, the owner's consent and the spending cap, checked per request | A device or agent token never carries purchase rights by itself |
+| glTF `extras` (game-object IDs, SKUs) | The model file | Written by whoever edits the file: fine as a label, never a permission |
+
+### PII, PCI and PHI: where each class may live
+
+Classify data before designing where it flows. The class decides which systems may hold it, not convenience.
+
+| Class | What it is | Examples here | May live in | Must never be in | Key controls |
+| --- | --- | --- | --- | --- | --- |
+| **PII** (personal data) | Anything that identifies a person: GDPR, CCPA, and state health-data laws | Name, email, address, device owner, a home's temperature history | Xano, in encrypted fields; Shopify customer records | Logs, URLs, token extras beyond an ID, themes, AI prompts beyond what the task needs | Minimise, consent, encrypt at rest, access by claim, deletion on request |
+| **PCI** (cardholder data) | Card number, security code, track data, under PCI DSS v4.0.1 | Card details at checkout | Only the payment provider's checkout (Shopify's), which hands back tokens | The Worker, Xano, logs, AI, devices: anywhere you control | Stay out of scope: never touch card data. The simplest assessment (SAQ A) now requires confirming your site isn't open to malicious scripts ([PCI SSC](https://blog.pcisecuritystandards.org/faq-clarifies-new-saq-a-eligibility-criteria-for-e-commerce-merchants)), which the edge head function's CSP supports |
+| **PHI** (health information under HIPAA) | Health information held by a covered entity or its business associate | A clinic's patient readings | Only vendors with a signed business associate agreement: Xano offers one on Enterprise plans ([Xano](https://docs.xano.com/enterprise/xano-for-enterprise)); Cloudflare signs one for Enterprise customers, for listed services ([Cloudflare](https://www.cloudflare.com/trust-hub/compliance-resources/hipaa/)) | **Shopify**: it signs no agreement, and its acceptable-use policy prohibits PHI ([HIPAA Journal](https://www.hipaajournal.com/is-shopify-hipaa-compliant/)). Any AI model without an agreement | Agreement first, then encryption, audit logs, minimum necessary access |
+
+A consumer thermometer sold directly to households is usually **not** HIPAA PHI, because the seller isn't a covered entity. Its readings are still **consumer health data**: Washington's My Health My Data Act has required consent for collecting and sharing it since 31 March 2024 ([Goodwin](https://www.goodwinlaw.com/en/insights/publications/2024/03/alerts-technology-hltc-my-health-my-data-act-mhmda)), and the FTC's Health Breach Notification Rule covers health apps and devices outside HIPAA ([FTC](https://www.ftc.gov/business-guidance/blog/2024/04/updated-ftc-health-breach-notification-rule-puts-new-provisions-place-protect-users-health-apps)). Design it as PII with health-grade consent.
+
+### AI-shaped infrastructure
+
+Infrastructure as a service was designed for people and programs. When AI agents act inside it, two things change: the agent becomes a **principal** with its own identity, and data has to be **shaped** before it reaches a model.
+
+| Concern | Traditional infrastructure | AI-shaped infrastructure |
+| --- | --- | --- |
+| Identity | People sign in; services hold API keys | Each agent has its own identity and claims, like a device: never a person's credentials, revocable on its own |
+| Permissions | Role-based, checked at sign-in | Checked per tool call against Xano entitlements and caps; high-stakes actions climb the decision ladder to a human |
+| Data to the model | Not applicable | Shaped at the Worker: IDs and derived facts ("ink low: yes"), never raw PII; card data never; PHI only to a model provider with a business associate agreement and no data retention |
+| Data stores | Databases and files | Also prompts, outputs, logs, caches and vector stores. Classify them all: personal data in embeddings is hard to find and delete, so store pseudonymous IDs there |
+| Retries and parallelism | Occasional | Constant: idempotency keys on every action |
+| Audit | Who logged in | Which agent, acting for whom, called which tool, with which data class, under which claim. This is the consent-aware event bus of the Higher-Order Stack |
+| Residency | Per application | Per data class and region, routed at the Worker before any model call |
+
+The rule of thumb: the model is the least trusted reader in the system. Give it the smallest shape of data that lets it do the job, and let the server, not the model, hold the keys.
+
 ## Rights metadata as lightweight DRM
 
 XMP rights fields don't lock an image; they declare who owns it and on what terms, in a form machines act on. Real DRM encrypts content. Rights metadata is closer to a label that travels with the file: it can be stripped, but a crawler, DAM or training pipeline that respects it can read the terms without a human.
@@ -823,5 +879,6 @@ exiftool -overwrite_original -XMP-xmpMM:all= photo.jpg
 - [Helmet](https://helmetjs.github.io/), [Cloudflare Workers: set security headers](https://developers.cloudflare.com/workers/examples/security-headers/) and [Cloudflare community: Shopify and the Cloudflare proxy](https://community.cloudflare.com/t/your-domain-has-a-cloudflare-proxy-which-is-not-supported-by-shopify/693008)
 - [Hacktron: Hacking OpenAI](https://www.hacktron.ai/blog/hacking-openai)
 - [Cloudflare: mutual TLS](https://developers.cloudflare.com/api-shield/security/mtls/), [European Commission: CRA reporting](https://digital-strategy.ec.europa.eu/en/policies/cra-reporting), [GOV.UK: consumer connectable product security](https://www.gov.uk/guidance/regulations-consumer-connectable-product-security), [Shopify: Functions languages](https://shopify.dev/docs/apps/build/functions/programming-languages) and [Shopify Help: product media types](https://help.shopify.com/en/manual/products/product-media/product-media-types)
+- [PCI SSC: SAQ A eligibility](https://blog.pcisecuritystandards.org/faq-clarifies-new-saq-a-eligibility-criteria-for-e-commerce-merchants), [Xano for Enterprise](https://docs.xano.com/enterprise/xano-for-enterprise), [Cloudflare HIPAA FAQs](https://www.cloudflare.com/trust-hub/compliance-resources/hipaa/), [HIPAA Journal: Shopify](https://www.hipaajournal.com/is-shopify-hipaa-compliant/), [Goodwin: My Health My Data Act](https://www.goodwinlaw.com/en/insights/publications/2024/03/alerts-technology-hltc-my-health-my-data-act-mhmda) and [FTC: Health Breach Notification Rule](https://www.ftc.gov/business-guidance/blog/2024/04/updated-ftc-health-breach-notification-rule-puts-new-provisions-place-protect-users-health-apps)
 - [How to export Cinema 4D to GLB](https://svilenkovic.com/3d/how-to-export-cinema4d-to-glb)
 - Measurements and parser output: game11ty files, the [live site](https://persephonepunch.github.io/game11ty/) and the CLO jacket and avatar GLBs, 3 October 2026
