@@ -14,7 +14,7 @@ from pathlib import Path
 from urllib.parse import urljoin, urlparse, urldefrag, unquote
 
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, NavigableString
 
 ASSET_DOMAINS = {
     "assets.website-files.com", "assets-global.website-files.com",
@@ -57,6 +57,14 @@ class Sync:
         self.assets = {}
         self.taken = {}
         self.pages = []          # [(path, soup)]
+        # Components the repo owns: src/_includes/components/<name>.njk.
+        cc = cfg.get("components") or {}
+        self.components = sorted(
+            p.stem for p in (self.out / "src/_includes/components").glob("*.njk"))
+        self.by_class = dict(cc.get("byClass") or {})
+        self.class_prefix = cc.get("classPrefix", "component-")
+        self.component_subs = {}     # marker -> include, swapped in after njk_escape
+        self.placed, self.unknown = {}, {}
 
     # ---------------- fetch ----------------
     def get(self, url, quiet=False):
@@ -190,6 +198,75 @@ class Sync:
                 img["loading"] = "lazy"
 
             self.uninstall_apps(soup)
+            if soup.body:
+                self.components_in(soup.body)
+
+    # ---------------- components from the repo ----------------
+    def component_for(self, el):
+        """(name, matched_class) for an element the repo renders, else None.
+
+        Three ways to mark one in Webflow, checked in this order:
+          data-component="video"              a custom attribute (Element settings)
+          class listed in components.byClass  a class the designer already uses
+          class "<prefix><name>"              the convention: component-video -> video.njk
+        This is the Next design-sync replace() hook, pinned to a rule instead of code.
+        """
+        if el.has_attr("data-component"):
+            return el["data-component"].strip(), None
+        classes = el.get("class") or []
+        for c in classes:
+            if c in self.by_class:
+                return self.by_class[c], c
+        if self.class_prefix:
+            for c in classes:
+                if c.startswith(self.class_prefix) and len(c) > len(self.class_prefix):
+                    return c[len(self.class_prefix):], c
+        return None
+
+    def components_in(self, root):
+        """Replace marked elements with markers for an include of the repo's component.
+
+        props = the element's data-* attributes (data-market -> props.market), plus
+        props.classes (its other Webflow classes, so combo classes like is-dark carry
+        over) and props.text (its visible text, so a replaced button keeps its label).
+
+        Markers are named by content, not position: the same component in the nav
+        yields the same marker on every page, so split_shell() still sees shared chrome.
+        """
+        sel = ["[data-component]"] + [f".{c}" for c in self.by_class]
+        if self.class_prefix:
+            sel.append(f'[class^="{self.class_prefix}"], [class*=" {self.class_prefix}"]')
+        replaced = set()
+        for el in root.select(", ".join(sel)):
+            # Inside a component already replaced: it went with its parent.
+            if any(id(a) in replaced for a in el.parents):
+                continue
+            hit = self.component_for(el)
+            if hit is None:
+                continue
+            name, cls = hit
+            if name not in self.components:
+                self.unknown[name] = self.unknown.get(name, 0) + 1
+                continue
+            props = {k[5:].replace("-", "_"): v for k, v in el.attrs.items()
+                     if k.startswith("data-") and k != "data-component"}
+            rest = [c for c in (el.get("class") or []) if c != cls]
+            if rest:
+                props["classes"] = " ".join(rest)
+            text = " ".join(el.get_text(" ").split())
+            if text:
+                props["text"] = text
+            njk = (f"{{% set props = {json.dumps(props, ensure_ascii=False)} %}}"
+                   f'{{% include "components/{name}.njk" %}}')
+            marker = f"@@WFCOMPONENT{hashlib.sha1(njk.encode()).hexdigest()[:12]}@@"
+            self.component_subs[marker] = njk
+            replaced.add(id(el))
+            el.replace_with(NavigableString(marker))
+            self.placed[name] = self.placed.get(name, 0) + 1
+
+    def place_components(self, html):
+        return re.sub(r"@@WFCOMPONENT[0-9a-f]{12}@@",
+                      lambda m: self.component_subs.get(m.group(0), m.group(0)), html)
 
     def uninstall_apps(self, soup):
         """Strip the copy of an app that Webflow bakes into page custom code.
@@ -366,9 +443,9 @@ class Sync:
                 cond = "{% if page.url == '" + url + "' %} w--current{% endif %}"
                 return m.group(0).replace(f'class="{cls}"', f'class="{cls}{cond}"')
 
-            return re.sub(
+            return self.place_components(re.sub(
                 r'<a\b[^>]*class="(?P<cls>[^"]*)"[^>]*href="(?P<href>[^"]*)"[^>]*>',
-                active, html)
+                active, html))
 
         if self.cfg["optimizeJsLoading"]:
             for n in footer:
@@ -425,7 +502,7 @@ class Sync:
                         fm["ogImageRelative"] = val.startswith("/")
                     fm.setdefault(PER_PAGE_META[key], val)
 
-            body = njk_escape("\n".join(str(n) for n in content))
+            body = self.place_components(njk_escape("\n".join(str(n) for n in content)))
             def yaml(k, v):
                 # Booleans must stay unquoted - "False" is a truthy string.
                 return f"{k}: {str(v).lower()}" if isinstance(v, bool) \
@@ -507,7 +584,8 @@ def load_config(path):
     """Read config.py the way design-sync read config.js."""
     defaults = {"site": None, "out": ".", "pages": [], "staticPageLimit": 200,
                 "removeBranding": True, "optimizeJsLoading": True,
-                "hoistPartialScripts": True}
+                "hoistPartialScripts": True,
+                "components": {"byClass": {}, "classPrefix": "component-"}}
     cfg = dict(defaults)
     f = Path(path)
     if f.exists():
@@ -554,3 +632,10 @@ if __name__ == "__main__":
     s.transform()
     s.write()
     print(f"\n{len(s.pages)} pages, {len(s.assets)} assets -> {cfg['out']}/")
+    if s.placed:
+        print("  components: " + ", ".join(f"{n} x{c}" for n, c in sorted(s.placed.items())))
+    if s.unknown:
+        print("\n  ! marked in Webflow but no src/_includes/components/<name>.njk "
+              "(left as Webflow drew it):")
+        for n, c in sorted(s.unknown.items()):
+            print(f"      {n} x{c}")

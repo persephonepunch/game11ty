@@ -33,8 +33,25 @@ is a cache, and assets no longer referenced are pruned.
 - Hoists the Webflow runtime (jQuery + IX2 chunks) into the layout
 - Escapes Webflow Ecommerce's own `{{wf ...}}` syntax so Nunjucks doesn't
   try to parse it
+- Swaps elements marked in Webflow for components the repo owns (see below)
 - Per-page `<title>` / meta -> front matter; everything else -> `base.njk`
 - Warns about references broken on Webflow itself
+
+## Components from the repo
+
+The Next 13 design-sync `replace()` hook, as a rule instead of code. Mark an
+element in Webflow and the sync swaps it for `src/_includes/components/<name>.njk`:
+
+- `data-component="video"` (Element settings -> Custom attributes)
+- a designer class mapped in `config.py` -> `components.byClass`
+- the class convention `component-video`
+
+The component gets `props`: the element's `data-*` attributes
+(`data-market` -> `props.market`), its other classes (`props.classes`) and its
+visible text (`props.text`). A name with no `.njk` file is reported and left as
+Webflow drew it. Components in the nav/footer are placed too, inside
+`header.njk` / `footer.njk`. `src/_includes/components/` is yours: the sync
+reads it and never rewrites it.
 
 ## config.py
 

@@ -28,6 +28,20 @@ config = {
     # on some pages. Needed here: the .fs-menu-toggle handler was on 6 of 10
     # pages, so the mobile menu was dead on the other 4.
     "hoistPartialScripts": True,
+
+    # Components from the repo (design-sync's replace() hook). A Webflow element
+    # is swapped for src/_includes/components/<name>.njk when it has
+    #   data-component="<name>"          (Element settings -> Custom attributes),
+    #   a class listed in byClass        (a class the designer already uses), or
+    #   the class "<classPrefix><name>"  (component-video -> video.njk).
+    # Its data-* attributes arrive as props (data-market -> props.market), its
+    # other classes as props.classes, its visible text as props.text. A name with
+    # no .njk file is reported and left as Webflow drew it.
+    # classPrefix: "" turns the convention off.
+    "components": {
+        "byClass": {},              # e.g. {"yt-lead": "video"}
+        "classPrefix": "component-",
+    },
 }
 
 # --- keys from design-sync/config.js that no longer apply -------------------
