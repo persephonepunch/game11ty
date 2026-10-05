@@ -6,7 +6,7 @@ scope: "How descriptions and rights travel with media files, from alt text to XM
 markdownUrl: "/docs/alt-xmp-favicons.md"
 sourceUrl: "https://github.com/persephonepunch/game11ty/blob/main/src/pages/article.md"
 pdfUrl: "/docs/alt-xmp-favicons.pdf"
-pdfSize: "2.0 MB"
+pdfSize: "2.1 MB"
 boardPdfUrl: "/docs/gamestreaming-xmpdata.pdf"
 updated: "2026-10-05"
 ogImage: "/docs/og-mediaxmp.jpg"
@@ -23,6 +23,8 @@ Search engines, asset managers and AI models decide what an image shows, and who
 This article explains each layer, the Adobe XMP standard behind embedded metadata, how it's stored in JPG, PNG and WebP, and how rights fields act as a lightweight form of DRM. It ends with a worked example, the game11ty site, and a checklist for agencies and media teams.
 
 **Companion article:** [Asset Management, Security and AI](https://www.crm-sync.dev/pages/knowledge-base#what-survives-the-transform) on the CRM Sync knowledge base — the media manager's view of the same pipeline: what a re-encode destroys and what it protects, raster and mesh compression including Draco and KTX2, and where media should live.
+
+**Challenge:** browser tests and EDI used to be enough. A browser test showed the page worked, and an EDI batch moved the order to SAP within 15 minutes. Now AI agents read, decide and act on the same data in seconds, retry on their own and repeat themselves. Testing and evaluation have to change too: test the data as well as the code, prove where regulated values go, and escalate high-stakes changes to a human. See [Testing the pipeline](#testing-the-pipeline-data-code-and-agents).
 
 
 ## Three layers, one description
@@ -549,6 +551,19 @@ Selling a connected thermometer or printer into the EU or UK makes device securi
 
 This section is also a plan. It settles four questions every layer above has to answer the same way: what Rust can and can't prevent, where permissions live, where each class of regulated data may go, and how infrastructure changes when AI agents act inside it.
 
+### Governance model: four priorities
+
+Older governance models were written for people signing in and for nightly or 15-minute batches: who may log in, who approves a change, where the backups go. When AI agents act inside the system, governance has to cover four things first, in this order. Each priority depends on the one before it: a permission check is only as good as the freshness of the data it reads and the protection against the same action running twice.
+
+| Priority | The question it answers | The rule | Enforced by | Tests |
+| --- | --- | --- | --- | --- |
+| **1. Real time** | Is the data an action relies on current enough to act on? | Decide on the real-time path; every record carries `occurred_at` and `recorded_at` in ISO 8601 UTC; each action has a staleness tolerance; batch copies (15-minute ERP, nightly Clarity) are for reconciliation only | Event streams and webhooks into the Xano ledger; freshness checks at evaluation | DH-08, DH-15, DH-16, DH-20 |
+| **2. Race** | Can the same action happen twice, or two actions collide? | Every action carries an idempotency key under a unique index; check-then-act is one conditional update; Rust ownership covers races inside one program | Database constraints in Xano; Rust's compiler on devices | DH-10 to DH-14 |
+| **3. Permissions** | Is this actor allowed to do this, right now? | Claims and entitlements live in the system of record and are re-checked per request; token extras, tags and synced fields are labels, never grants; revocation is a ledger entry, effective immediately | Xano claims, consent and caps, read on every high-stakes request | DH-04, DH-17, DH-18 |
+| **4. Trust / boundary** | What may cross from one trust zone to the next? | Classify data (PII, PCI, PHI) before it moves; shape it at each boundary (browser to Worker, Worker to model, Xano to vendor, device to cloud); the model is the least trusted reader; PHI crosses only to parties with a business associate agreement | The edge Worker, mutual TLS for devices, routing by data class and region | DH-01 to DH-03, DH-05 to DH-07, DH-19 |
+
+The subsections that follow work through each priority: real time and race from data races through testing, permissions in [claims and entitlements](#permissions-claims-and-entitlements-not-token-extras), and trust and boundaries in [where each class may live](#pii-pci-and-phi-where-each-class-may-live) and [AI-shaped infrastructure](#ai-shaped-infrastructure). The test IDs refer to the [data hygiene test requirements](/docs/data-hygiene-tests.md): 20 Given / When / Then tests, one per rule.
+
 ### Data races and race conditions
 
 Rust prevents one kind of timing bug and not the other.
@@ -724,6 +739,76 @@ Xano's authentication tokens are encrypted JWE tokens, and their *extras* can ca
 | Anything revocable or high-stakes: orders, payments, firmware downloads, rights changes | Claims and entitlements in Xano tables, re-checked on every request | A refund or a withdrawn consent can't be pulled back out of an issued token |
 | Device and agent actions | The device or agent record, the owner's consent and the spending cap, checked per request | A device or agent token never carries purchase rights by itself |
 | glTF `extras` (game-object IDs, SKUs) | The model file | Written by whoever edits the file: fine as a label, never a permission |
+
+### Testing the pipeline: data, code and agents
+
+**Challenge.** Browser testing and EDI used to be enough. A Selenium script clicked through checkout, the page worked, and an EDI batch carried the order to SAP within 15 minutes. People were the only ones acting on the data, at human speed, and a short delay or an untested log line rarely mattered. AI changes all three: agents act on data in seconds, run in parallel and retry on their own; they read whatever data reaches them, including what leaked into a prompt or a log; and their decisions are only as good as the freshness of what they read. A test that only asks "does the page work?" can pass while an agent oversells stock, acts on a revoked consent or sends PII to a model. The testing and evaluation process has to change with it: test the data as well as the code, prove where regulated values go, attack the system on purpose, and escalate to a human where the stakes call for it.
+
+The rules above only hold if something proves them on every change. Testing here has two targets: the **code**, and the **data** the code moves.
+
+**Why test your data, not just your code.** Code tests pass while the data is wrong. A field loses its class tag, a sync writes local time instead of UTC, a batch replays without its key, a copy drifts from the system of record. Nothing crashes, so no code test notices. AI agents make this worse: an agent acts on whatever data it's given, with confidence. And regulators judge where the data went, not what the code intended. Data tests check the facts themselves: every field classified, every timestamp ISO 8601 UTC, every key unique, every copy reconciled, no regulated value anywhere it shouldn't be.
+
+#### Kinds of test
+
+| Kind | What it is | Example here | Catches |
+| --- | --- | --- | --- |
+| **Unit test** | Tests one function on its own, with no network or database; runs in milliseconds | `isIsoUtc("2026-10-05T14:03:27Z")` is true; `"UK"` fails the region check | Logic errors in a single rule |
+| **Integration test** | Tests real parts working together (Worker, Xano, Shopify test store) in a test workspace | The same idempotency key sent 20 times in parallel creates one order and one ledger row | Gaps between systems: indexes, permissions, retries |
+| **Canary test** | Plants a clearly fake marker value, runs a real flow, then searches everywhere it must not appear | Card `4242 4242 4242 4242` and `canary+dh@example.com` go through checkout; neither appears in Xano, logs, prompts or vector stores | Leaks nobody designed: a debug log, a third-party script, a prompt that pulled a whole record |
+| **End-to-end (browser) test** | Drives a real browser through the site as a visitor would | With consent declined, no analytics or AI request leaves the page | What actually happens in the browser, including third-party scripts |
+| **Adversarial test** | Generates hostile or unusual inputs on purpose and checks the system refuses them | Prompt injection in a product review, `"pounds"` as currency, a stale entitlement, a replayed batch | Cases the author didn't think of |
+
+The name **canary** comes from the birds miners carried to detect gas before people could. A canary value is safe to use often, because it can never be real customer data, and it turns "card data never touches our systems" from a claim into evidence. Run canaries in a test workspace, never against production records. (A *canary release*, shipping to a small share of traffic first, is a different practice with the same name.)
+
+#### TDD, with an adversary
+
+Test-driven development (TDD), as in the user stories above, writes the test first and the code until it passes. Its weakness is that the same author writes both, so the tests only cover what the author imagined.
+
+**Adversarial testing** adds an opponent. The idea borrows from a **GAN** (generative adversarial network), where a generator tries to fool a discriminator and both improve. Here it's a loop, not a trained network:
+
+1. **Generator.** An AI agent is asked to break a rule: produce inputs that should be refused (injected instructions, malformed ISO codes, duplicate retries, stale data, PII hidden in free text, an agent claiming a right it doesn't have).
+2. **Discriminator.** The system under test, plus the checks above, decides: refused correctly, or let through.
+3. **Learn.** Every input that got through becomes a new failing test, TDD style. The code is fixed until it passes, and the test stays as a regression guard.
+4. **Repeat** on each release, so the generator keeps looking for the next gap.
+
+The generator runs in a test workspace with canary data only. It's a tool for finding gaps, not an authority: what it finds is reviewed like any other bug report.
+
+#### AI escalation: when a human reviews
+
+AI can write tests, run them and review code. It shouldn't be the last word on changes that alter who gets in, where regulated data goes, or what an agent may buy. Review climbs a ladder, like the [decision ladders](#decision-ladders) above, and stops at the first rung that's enough:
+
+| Rung | Who reviews | Enough for |
+| --- | --- | --- |
+| 1. Automated tests | Unit, integration, canary and browser tests in CI | Content, copy, styling: changes that touch no rule |
+| 2. AI review | An AI reviewer reads the diff against the data hygiene checklist and the test results | Ordinary code changes with passing tests |
+| 3. AI + human | The AI flags; a person approves | New fields or data flows, new agent tools, integration mappings, freshness tolerances |
+| 4. Human only | A named person decides; AI may draft, never approve | Permissions, claims and caps; consent logic; anything touching PHI or card data; keys and encryption; the system-of-record map |
+
+Escalate automatically when a change touches a classified field, a permission check or a model call, when a canary or adversarial test fails, or when the AI reviewer's confidence is low. The review record (which rung, who, which tests) goes in the ledger with the change.
+
+#### Selenium or Playwright
+
+Both drive real browsers for end-to-end tests. Selenium is the long-standing standard, built on the W3C WebDriver protocol, with the widest range of languages, browsers and existing test suites. Playwright, from Microsoft, is newer and built around how modern sites behave.
+
+| | Selenium | Playwright |
+| --- | --- | --- |
+| Protocol | W3C WebDriver (WebDriver BiDi being added) | Talks to browsers directly over their own protocols |
+| Browsers | Chrome, Firefox, Safari, Edge, plus older browsers and large device grids | Chromium, Firefox and WebKit (Safari's engine), bundled and version-matched |
+| Waiting | Explicit waits written by hand; a common source of flaky tests | Waits automatically until an element is ready |
+| Network | Limited without extra tools | Intercept, block, inspect or fake any request (`page.route`) |
+| Isolation | One browser profile per session | Many isolated browser contexts in one browser: separate users, cookies and storage, run in parallel |
+| Evidence | Screenshots; video and logs via add-ons | Built-in trace viewer: every action, request, console message and DOM snapshot |
+| Best fit | Large existing suites, legacy browsers, many languages | New suites for modern sites, and tests about data leaving the browser |
+
+**Why Playwright here.** The tests that matter most in this design are about data in motion, and Playwright can watch the network:
+
+- **Consent before egress.** With consent declined, assert that no request goes to analytics, ad or AI hosts, by listening to every request the page makes.
+- **Canaries in the browser.** Type the canary email into a form, then assert it appears in no outgoing request except the one allowed endpoint, and in no URL.
+- **Several principals at once.** Separate contexts act as a customer, a second customer and an agent in the same test, which is how permission and idempotency races are reproduced.
+- **Evidence for review.** The trace is attached to the review record, so a human at rung 3 or 4 sees exactly what happened.
+- **Already in the stack.** The Hydrogen projects ship with Playwright, and AI agents can drive it directly, so the same tool serves CI and agent-run checks.
+
+Selenium remains the right choice where a team already has a large WebDriver suite or must cover browsers Playwright doesn't ship.
 
 ### PII, PCI and PHI: where each class may live
 
