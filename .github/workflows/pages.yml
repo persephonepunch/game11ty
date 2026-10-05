@@ -79,6 +79,20 @@ jobs:
           PATH_PREFIX: /game11ty/
       - name: Hash manifest of the release
         run: python3 scripts/asset_scan.py --manifest _site
+      - name: Diff against the live release (SB-24, diagnosis and record only)
+        # Never blocks: it reports which files' bytes changed and keeps the record.
+        continue-on-error: true
+        run: |
+          curl -fsS https://persephonepunch.github.io/game11ty/asset-manifest.json -o previous-manifest.json \
+            || echo "no previous manifest reachable; this release is the baseline"
+          python3 scripts/manifest_diff.py previous-manifest.json _site/asset-manifest.json \
+            --out _site/manifest-diff.json --summary "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: manifest-diff
+          path: _site/manifest-diff.json
+          if-no-files-found: ignore
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

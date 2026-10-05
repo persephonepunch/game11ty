@@ -3,7 +3,7 @@
 Mutation check: proves the tests have teeth.
 
 A smoke test passes whether or not a rule works. This script breaks one rule at
-a time in a throwaway copy of asset_scan.py and runs the test suite against it.
+a time in a throwaway copy of asset_scan.py or manifest_diff.py and runs the test suite against it.
 Every mutant must be "killed" (at least one test fails). A mutant that survives
 means a rule could be deleted without any test noticing: write the missing test.
 
@@ -36,22 +36,38 @@ MUTANTS = [
 ]
 
 
+# SB-24: the release diff, tested by tests/test_manifest_diff.py via MANIFEST_DIFF.
+DIFF_SOURCE = (ROOT / "scripts" / "manifest_diff.py").read_text()
+DIFF_MUTANTS = [
+    ("SB-24", "changed bytes not reported", "if cur[path] != old[path]:", "if False:"),
+    ("SB-24", "added files not reported", 'record["added"] = sorted(set(cur) - set(old))', 'record["added"] = []'),
+    ("SB-24", "removed files not reported", 'record["removed"] = sorted(set(old) - set(cur))', 'record["removed"] = []'),
+    ("SB-24", "other hash algorithms compared anyway", 'if m.get("algorithm") != "sha256":', "if False:"),
+    ("SB-24", "unreadable manifest crashes the run", "except (ValueError, UnicodeDecodeError) as e:", "except OSError as e:"),
+    ("SB-24", "missing previous manifest crashes the run", "        old = {}\n", "        pass\n"),
+    ("SB-24", "the diff blocks a release", "    return 0\n\n\nif __name__", "    return 1 if r['changed'] else 0\n\n\nif __name__"),
+    ("SB-24", "timestamp not UTC ISO 8601", '"%Y-%m-%dT%H:%M:%SZ"', '"%d/%m/%Y %H:%M"'),
+]
+
+
 def main():
     survivors = 0
-    for rule, what, old, new in MUTANTS:
-        if old not in SOURCE:
+    jobs = [("asset_scan.py", "ASSET_SCAN", SOURCE, m) for m in MUTANTS] + \
+           [("manifest_diff.py", "MANIFEST_DIFF", DIFF_SOURCE, m) for m in DIFF_MUTANTS]
+    for name, env, source, (rule, what, old, new) in jobs:
+        if old not in source:
             print(f"STALE   {rule}  {what}: mutation target not found, update tests/mutate.py")
             survivors += 1
             continue
         with tempfile.TemporaryDirectory() as d:
-            mutant = Path(d) / "asset_scan.py"
-            mutant.write_text(SOURCE.replace(old, new, 1))
+            mutant = Path(d) / name
+            mutant.write_text(source.replace(old, new, 1))
             r = subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", str(ROOT / "tests")],
-                               env={**os.environ, "ASSET_SCAN": str(mutant)}, capture_output=True, text=True)
+                               env={**os.environ, env: str(mutant)}, capture_output=True, text=True)
         killed = r.returncode != 0
         survivors += not killed
         print(f"{'killed ' if killed else 'SURVIVED'} {rule}  {what}")
-    print(f"\n{len(MUTANTS) - survivors}/{len(MUTANTS)} mutants killed")
+    print(f"\n{len(jobs) - survivors}/{len(jobs)} mutants killed")
     sys.exit(1 if survivors else 0)
 
 
