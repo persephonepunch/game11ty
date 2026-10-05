@@ -6,7 +6,7 @@ scope: "How descriptions and rights travel with media files, from alt text to XM
 markdownUrl: "/docs/alt-xmp-favicons.md"
 sourceUrl: "https://github.com/persephonepunch/game11ty/blob/main/src/pages/article.md"
 pdfUrl: "/docs/alt-xmp-favicons.pdf"
-pdfSize: "1.9 MB"
+pdfSize: "2.0 MB"
 boardPdfUrl: "/docs/gamestreaming-xmpdata.pdf"
 updated: "2026-10-05"
 ogImage: "/docs/og-mediaxmp.jpg"
@@ -641,6 +641,23 @@ The pattern survives if the batch is demoted from authority to reconciliation:
 - **Move the hot paths onto events.** Stock, price, order status and consent belong on events: IDocs set to send immediately rather than collected, SAP's event mesh, Boomi Event Streams, MuleSoft Anypoint MQ or Celigo's real-time listeners. Keep EDI batches for documents a partner batches anyway.
 
 The rule of thumb: a 15-minute feed can tell you what happened; it can't tell an agent what's true now.
+
+#### The same gap in healthcare: Epic
+
+Epic isn't SAP. Epic Systems makes electronic health records; SAP makes business ERP software. A hospital often runs both: Epic for the clinical chart, SAP (or Oracle or Workday) for finance, payroll and supply chain. The data gap has the same shape in Epic, with a different interval. The chart itself is real time; the lag appears where data is copied out, and the largest copy is usually nightly.
+
+| Epic layer | What it is | Freshness |
+| --- | --- | --- |
+| **Chronicles** | The operational database clinicians chart into | Real time: Epic's system of record for the chart |
+| **HL7 v2 interfaces** | Admissions, orders, results and messages to and from labs, devices and other systems | Mostly real time, one message per event; some feeds are batched, depending on the site |
+| **FHIR and other APIs** | What apps and AI tools call | Read from Chronicles, near real time |
+| **Clarity** | SQL reporting database extracted from Chronicles | Usually refreshed nightly: up to about a day behind |
+| **Caboodle** | Data warehouse built from Clarity and other sources | Nightly or slower |
+| **Bulk FHIR export** | Population-level exports | Batch, on a schedule |
+
+So the risk in Epic is *yesterday's* data, not the last 15 minutes. An AI agent, an analytics job or a consent check that evaluates against Clarity can act on facts up to a day old: a new allergy, a stopped medication, a withdrawn consent. Integration engines around Epic can add their own polling delay, just as Boomi, Celigo or MuleSoft do in front of SAP. Refresh schedules vary by health system, so check each site's setup rather than assuming one.
+
+The pattern still holds, with Epic in Xano's place for clinical facts: Chronicles is the system of record, decisions read it through live APIs or event feeds, and Clarity is for reconciliation and reporting only. Everything an agent sees from it is PHI, so it may reach only vendors and models covered by a business associate agreement.
 
 ### Xano as system of record: a timestamped ledger
 

@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "eleventy --serve",
-    "build": "eleventy"
+    "build": "eleventy",
+    "pdf": "scripts/build-pdf.sh"
   },
   "devDependencies": {
     "@11ty/eleventy": "^3.1.2"
