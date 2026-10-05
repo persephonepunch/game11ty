@@ -18,7 +18,7 @@
 <meta name="twitter:image" content="{{ site.url }}{{ ogImage }}">
 <meta name="twitter:image:alt" content="{{ ogImageAlt }}">
 <link href="/favicon.ico" rel="icon" sizes="16x16 32x32 48x48">
-<script type="application/ld+json">{{ { "@context": "https://schema.org", "@type": "TechArticle", "headline": title, "description": description, "url": site.url + "/article/", "dateModified": "2026-10-03", "image": { "@type": "ImageObject", "url": site.url + ogImage, "width": 1200, "height": 630, "description": ogImageAlt }, "encoding": [{ "@type": "MediaObject", "encodingFormat": "application/pdf", "contentUrl": site.url + pdfUrl }, { "@type": "MediaObject", "encodingFormat": "text/markdown", "contentUrl": site.url + markdownUrl }] } | dump | safe }}</script>
+<script type="application/ld+json">{{ { "@context": "https://schema.org", "@type": "TechArticle", "headline": title, "description": description, "url": site.url + "/article/", "dateModified": updated, "image": { "@type": "ImageObject", "url": site.url + ogImage, "width": 1200, "height": 630, "description": ogImageAlt }, "encoding": [{ "@type": "MediaObject", "encodingFormat": "application/pdf", "contentUrl": site.url + pdfUrl }, { "@type": "MediaObject", "encodingFormat": "text/markdown", "contentUrl": site.url + markdownUrl }] } | dump | safe }}</script>
 <!-- CRM Sync reference-doc design system (one canonical source) -->
 <link rel="stylesheet" href="https://persephonepunch.github.io/crm-sync-setup/doc.css">
 <style>
@@ -48,6 +48,12 @@
   .kbgrid{grid-template-columns:minmax(0,1fr);padding:0 20px;gap:0}
   .kbnav{position:static;height:auto;max-height:300px;border-right:0;border-bottom:1px solid var(--g2);padding:24px 0}
 }
+@media print{
+  .docbar,.kbnav{display:none}
+  .kbgrid{display:block;padding:0}
+  tr,pre,figure{break-inside:avoid}
+  h2,h3,h4{break-after:avoid}
+}
 </style>
 </head>
 <body>
@@ -75,12 +81,12 @@
       <h1>{{ title }}</h1>
       <figure class="hero-fig">
         <a href="{{ heroImage }}"><img src="{{ heroImage }}" width="1600" height="900" alt="{{ ogImageAlt }}" fetchpriority="high"></a>
-        <figcaption>The build board behind this article. <a href="{{ pdfUrl }}" download>Download the full-resolution PDF</a>.</figcaption>
+        <figcaption>The build board behind this article. <a href="{{ boardPdfUrl }}" download>Download the full-resolution PDF</a>.</figcaption>
       </figure>
       <p class="sub summary"><b>Summary.</b> {{ summary }}</p>
       <div class="meta"><span>Status: <b>{{ status }}</b></span></div>
       <div class="meta"><span>Scope: <b>{{ scope }}</b></span></div>
-      <div class="meta"><span>Updated <b>2026-10-03</b></span><span><a href="{{ pdfUrl }}" download>Download the PDF</a> (8.9 MB)</span><span><a href="{{ markdownUrl }}" download>Markdown</a></span><span><a href="{{ sourceUrl }}" target="_blank" rel="noopener">GitHub source</a></span></div>
+      <div class="meta"><span>Updated <b>{{ updated }}</b></span><span><a href="{{ pdfUrl }}" download>Download the PDF</a> ({{ pdfSize }})</span><span><a href="{{ markdownUrl }}" download>Markdown</a></span><span><a href="{{ sourceUrl }}" target="_blank" rel="noopener">GitHub source</a></span></div>
     </header>
     <article class="doc">
 {{ content | safe }}
