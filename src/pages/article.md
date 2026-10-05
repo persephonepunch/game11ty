@@ -557,7 +557,142 @@ Rust prevents one kind of timing bug and not the other.
 | Prevented by Rust? | **Yes, at compile time.** Ownership and the `Send`/`Sync` rules reject unsafe sharing | **No.** It's logic across requests, often across machines |
 | Who fixes it | The compiler | The database: an **idempotency key** with a **unique index** (one reorder per device per low-ink event) and **conditional updates** ("only if no open reorder exists") |
 
+#### How ownership exclusion works
+
+Rust's rule is **aliasing XOR mutation**: at any moment a value has either any number of readers (`&T`) or exactly one writer (`&mut T`), never both. Every value has one owner; passing it *by value* moves it, and the old name can't be used again. The compiler checks this before the program runs, which is why two tasks can't write one buffer at once: the second `&mut` doesn't compile.
+
+The same exclusion also stops a common race condition *inside one program*, check-then-act, if the check and the act are made to need the same exclusive access:
+
+```rust
+use std::sync::Mutex;
+
+struct Device { open_reorder: Option<ReorderId> }
+
+/// A reservation can only be created by `reserve` and only used once.
+pub struct Reservation { device_id: DeviceId }
+
+fn reserve(device: &Mutex<Device>, id: DeviceId) -> Option<Reservation> {
+    let mut d = device.lock().unwrap();      // exclusive: no one else can check or act
+    if d.open_reorder.is_some() { return None; }   // check...
+    d.open_reorder = Some(ReorderId::pending());   // ...and act, under the same lock
+    Some(Reservation { device_id: id })
+}                                            // lock released here, after both
+
+fn place_order(r: Reservation) { /* takes ownership */ }
+
+// place_order(r); place_order(r);  // error[E0382]: use of moved value `r`
+```
+
+- **The lock guard** is the only way to touch `Device`, so the check and the write can't be split by another task.
+- **The `Reservation`** is consumed by value: one reservation buys one order, and spending it twice is a compile error, not a runtime bug.
+
+Where it stops: ownership lives in one process's memory. Two Workers, a retried request or a second agent each have their own copy, and the compiler can't see across the network. That's why the table puts the cross-request fix in the database. The idempotency key is the same idea as the `Reservation`, enforced by a unique index instead of the compiler.
+
 AI agents make race conditions more common: they retry, run in parallel and repeat themselves. Every action an agent can trigger needs an idempotency key, so the second attempt is refused by the database, not by luck.
+
+### In brief: idempotency keys and the system of record
+
+**Problem.** Networks fail, AI agents retry and streams deliver the same event more than once. Without protection, a retry looks like a new order, and two "ink 8%" readings become two reorders. At the same time, every system holds its own version of the facts: a token says an agent may buy, a cache says stock is available, a 15-minute SAP batch says something else. When they disagree, nothing says which one is right.
+
+**Challenge.** Two questions need one answer each, every time: *has this already happened?* and *what's true right now?* An **idempotency key** answers the first. It's a unique ID for one intended action, such as `reorder:{device_id}:{low_ink_event_id}`, sent with the request and stored with its result under a unique index; a repeat with the same key gets the stored result back and nothing happens twice. A **system of record (SoR)** answers the second. It's the one system where a fact is first written, owned and kept with its history; every other system holds a copy, and when a copy disagrees, the system of record wins and the copy is corrected. The hard part is discipline: every agent, device and integration has to route its actions through the same keys and the same record, including the batch jobs that would rather write straight to their own copy.
+
+**Result.** Xano is the system of record for claims, entitlements, consent, agent and device identities, reorders and agent actions; card data stays with Shopify's checkout and invoices with SAP. An agent's action counts only once it's recorded in Xano under its idempotency key. Retries return the first result instead of repeating it, a revoked permission is refused even when the agent's token still says yes, and reconciling any copy, an agent's view, a cache or a batch, is a comparison against one record rather than an argument between systems.
+
+### Idempotency, real-time streams and evaluation
+
+Three terms carry the rest of this section.
+
+**Idempotency.** An operation is idempotent when doing it twice has the same effect as doing it once. "Set stock to 12" is idempotent; "subtract 1 from stock" isn't. To make an action idempotent, the caller sends an **idempotency key**: a unique ID for the *intent*, such as `reorder:{device_id}:{low_ink_event_id}`. The server stores the key with the result. A repeat with the same key gets the stored result back and nothing happens a second time ([Stripe](https://docs.stripe.com/api/idempotent_requests)).
+
+**Real-time data streaming.** Each change is published as an event the moment it happens (a webhook, a queue message, a change-data-capture record) and consumers act on it within seconds. Streams deliver events *at least once*, sometimes out of order. That's why streaming and idempotency come as a pair: at-least-once delivery plus an idempotent consumer gives an effectively-once result.
+
+**Evaluation.** Before an event causes an action, it's evaluated against current state: is the claim still valid, is consent still on, is the spending cap unspent, is the world still the way the event assumes (a conditional update on a version number)? For AI agents the same step scores the agent's decision against live data before it's allowed through. Evaluation is only as good as the freshness of what it reads.
+
+| Step | What happens | What makes it safe |
+| --- | --- | --- |
+| 1. Event | The device reports "ink 8%"; a webhook reaches the Worker with an event ID | Signed payload, event ID from the source |
+| 2. Deduplicate | The Worker derives the idempotency key and inserts it | Unique index: a repeat is refused by the database |
+| 3. Evaluate | Re-read claims, consent, cap, open reorders and stock | Read from current state, never from the event or a token |
+| 4. Act | Create the reorder | Conditional update: "only if no open reorder exists" |
+| 5. Record | Write the audit entry | The consent-aware event bus: which agent, for whom, under which claim |
+
+### When the integration layer runs every 15 minutes
+
+Many ERP integrations, SAP behind Boomi, Celigo or MuleSoft, run as **scheduled batches**: a poll every 15 minutes, IDocs collected and sent by a background job, or EDI documents (850 purchase orders, 846 inventory, 856 ship notices) exchanged in batches through a trading partner. All three platforms can run on events, but the schedule is often set by something else: SAP's batch jobs, a partner's EDI window, or API and licence limits. When it is, the ERP's view trails the stream by up to 15 minutes, and anything that evaluates against it reads stale truth.
+
+| What breaks | Example | Why |
+| --- | --- | --- |
+| **Evaluation reads stale state** | An agent checks stock synced 14 minutes ago and promises the last unit; SAP sold it 12 minutes ago | Step 3 above is only correct if "current state" is current |
+| **Idempotency keys don't survive the hop** | A batch map drops the event ID; a failed run is retried and SAP creates every sales order twice | The real-time layer refused duplicates; the ERP never saw the key |
+| **Order collapses** | A reorder and its cancellation, three minutes apart, land in one batch and are applied in file order, not event order | Batches sort by arrival, not by when things happened |
+| **Revocation lags** | Consent is withdrawn or a refund issued at 10:01; the entitlement synced from SAP changes at 10:15 | For 14 minutes an agent can act on a revoked right: the same snapshot problem as token extras |
+| **Agents amplify the gap** | No confirmation for 15 minutes, so the agent retries, or a second agent acts on the same signal | The pending state is invisible to anyone outside the batch |
+| **Regulated data piles up** | Each batch is a file of full customer records waiting on SFTP or in a staging table | A batch is a copy: it widens where PII lives and must be classified like any store |
+
+The pattern survives if the batch is demoted from authority to reconciliation:
+
+- **Decide on the real-time path, reconcile on the batch.** Revocable and high-stakes checks read Xano claims and the Xano ledger below, fed by Shopify webhooks. The 15-minute feed corrects and reports; it never grants.
+- **Carry the idempotency key end to end.** Map it into a unique external reference in SAP, so a replayed batch is refused there too, not just at the Worker.
+- **Stamp freshness and set a tolerance per action.** Every synced record carries an `as_of` time. Evaluation refuses, or climbs the decision ladder to a human, when the data is older than the action allows: seconds for selling the last unit, minutes for a catalogue description.
+- **Reserve, then confirm.** Hold a reservation in the real-time layer when the decision is made; the batch confirms or releases it. Show the agent "pending" so it doesn't retry.
+- **Move the hot paths onto events.** Stock, price, order status and consent belong on events: IDocs set to send immediately rather than collected, SAP's event mesh, Boomi Event Streams, MuleSoft Anypoint MQ or Celigo's real-time listeners. Keep EDI batches for documents a partner batches anyway.
+
+The rule of thumb: a 15-minute feed can tell you what happened; it can't tell an agent what's true now.
+
+### Xano as system of record: a timestamped ledger
+
+One system has to be the answer when two disagree.
+
+**System of record (SoR).** The one system where a fact is first written, owned and kept, with its history. Every other system holds a copy. When a copy and the system of record disagree, the system of record wins and the copy is corrected. A fact has exactly one system of record; a system can be the record for some facts and a copy for others.
+
+**Source of truth.** The system every decision *reads* from. Here it's the same system as the record, on purpose: if agents evaluated against a copy, a permission could be granted on data the record has already changed.
+
+| Role | Definition | Who plays it here |
+| --- | --- | --- |
+| **System of record** | Writes, owns and keeps the history of a fact | **Xano**, for claims, entitlements, consent, agent and device identities, reorders and agent actions |
+| **Source of truth** | What evaluation reads before any action | **Xano**, the same tables, read per request |
+| **System of engagement** | Where people or agents start an action | Shopify storefront and checkout, Webflow, devices, AI agents |
+| **Copy** | Holds a synced or cached version for speed or reporting | Token extras, Worker caches, Shopify tags and metafields, SAP via the 15-minute batch, vector stores |
+
+Some facts have a different system of record: card data belongs to Shopify's checkout and never enters Xano; the general ledger and invoices belong to SAP. Xano holds references to those, not the facts themselves.
+
+**Why the definition matters for reconciliation.** An agent's view and a permission can each drift: the agent holds a token, a cached entitlement or a fact it was told minutes ago, while the claim in Xano has changed. Reconciliation means comparing each copy to the system of record and resolving the difference one way, always in the record's favour:
+
+| Agent's copy says | Xano says | Result |
+| --- | --- | --- |
+| Allowed (token extras, cache) | Claim revoked, consent withdrawn or cap spent | **Refused.** The agent's copy is invalidated and the refusal recorded |
+| Not allowed, or unknown | Claim active | Evaluate normally; refresh the agent's copy |
+| Action done (it got no confirmation, or it retried) | Idempotency key already in the ledger | Return the stored result; nothing happens twice |
+| Action done | No ledger entry | **It didn't happen.** The agent must submit it through Xano |
+| Fact from a 15-minute batch | A newer entry by `occurred_at` | The newer entry stands; the batch difference is flagged, not applied |
+
+Shopify, SAP, Webflow, the Worker and every AI agent hold copies or send requests; none of them is the authority for claims, consent, entitlements, reorders or agent actions.
+
+Xano keeps that authority as a **ledger**: an append-only table of events, never edited or deleted, from which current state is derived.
+
+| Field | Format | Why |
+| --- | --- | --- |
+| `id` | Sequential ID assigned by Xano | Total order inside the system of record |
+| `idempotency_key` | Unique index | A repeat from a retry, a replayed batch or a second agent is refused here |
+| `occurred_at` | ISO 8601 in UTC, e.g. `2026-10-05T14:03:27.412Z` | When it happened at the source: used to order events |
+| `recorded_at` | ISO 8601 in UTC, set by Xano | When the system of record learned of it: the gap to `occurred_at` *is* the latency, so a 15-minute batch shows up in the data |
+| `source` | `shopify_webhook`, `sap_batch`, `agent:{id}`, `device:{id}` | Who said so |
+| `actor` / `on_behalf_of` | Agent, device or user ID; the owner it acts for | Agents are principals, never borrowers of a person's credentials |
+| `claim_id` | Reference to the entitlement checked | Which right allowed it, at that moment |
+| `event_type` / `payload` | Controlled list; IDs and derived facts, not raw PII | The ledger is long-lived: minimise what goes in |
+| `region`, `currency`, `language` | ISO 3166-1, ISO 4217, ISO 639 / BCP 47 codes | A shared register of codes, so `GB`, `GBP` and `en-GB` mean the same thing in Xano, SAP, Shopify and an agent's prompt |
+| `data_class` | `none`, `pii`, `phi` (never `pci`) | Residency and model routing are decided per class |
+| `reverses` | ID of the entry it corrects | Mistakes are fixed with a new entry, never by editing history |
+
+**The guideline for code, AI agents and permissions pipelines:**
+
+1. **Write to the ledger first, then act.** An action that isn't in the ledger didn't happen. Agents and code call a Xano endpoint that records the intent with its key, evaluates, and only then creates the order, download or rights change.
+2. **Read permissions from Xano, not from copies.** Token extras, glTF extras, Shopify tags and SAP fields are labels. The permission check reads the claim in Xano on every high-stakes request.
+3. **Timestamps are ISO 8601 UTC, always.** No local times, no epoch numbers in one system and strings in another. Order by `occurred_at`; measure staleness with `now - recorded_at`; refuse when it exceeds the action's tolerance.
+4. **Codes come from ISO registers.** Region, currency and language are ISO codes validated on write; free text like "UK" or "pounds" is rejected, so agents can't invent values.
+5. **Copies are reconciled against the ledger, not the other way round.** A 15-minute SAP batch is recorded as entries with `source: sap_batch`; where it disagrees with what Xano already recorded, the difference is flagged for review, not overwritten.
+6. **Revocation is an entry.** A withdrawn consent or a refund is appended the moment it's known and takes effect on the next evaluation, with no wait for a token to expire or a batch to run.
+7. **Audit is a query.** "Which agent, acting for whom, did what, under which claim, with which data class" is a read of the ledger, not a forensic exercise across logs.
 
 ### Permissions: claims and entitlements, not token extras
 
@@ -896,5 +1031,6 @@ exiftool -overwrite_original -XMP-xmpMM:all= photo.jpg
 - [Cloudflare: mutual TLS](https://developers.cloudflare.com/api-shield/security/mtls/), [European Commission: CRA reporting](https://digital-strategy.ec.europa.eu/en/policies/cra-reporting), [GOV.UK: consumer connectable product security](https://www.gov.uk/guidance/regulations-consumer-connectable-product-security), [Shopify: Functions languages](https://shopify.dev/docs/apps/build/functions/programming-languages) and [Shopify Help: product media types](https://help.shopify.com/en/manual/products/product-media/product-media-types)
 - [PCI SSC: SAQ A eligibility](https://blog.pcisecuritystandards.org/faq-clarifies-new-saq-a-eligibility-criteria-for-e-commerce-merchants), [Xano for Enterprise](https://docs.xano.com/enterprise/xano-for-enterprise), [Cloudflare HIPAA FAQs](https://www.cloudflare.com/trust-hub/compliance-resources/hipaa/), [HIPAA Journal: Shopify](https://www.hipaajournal.com/is-shopify-hipaa-compliant/), [Goodwin: My Health My Data Act](https://www.goodwinlaw.com/en/insights/publications/2024/03/alerts-technology-hltc-my-health-my-data-act-mhmda) and [FTC: Health Breach Notification Rule](https://www.ftc.gov/business-guidance/blog/2024/04/updated-ftc-health-breach-notification-rule-puts-new-provisions-place-protect-users-health-apps)
 - [Becker's: Sharp HealthCare lawsuit](https://www.beckershospitalreview.com/legal-regulatory-issues/patient-sues-sharp-healthcare-over-ambient-ai-use/), [HIPAA Journal: Sutter and Memorial lawsuit](https://www.hipaajournal.com/lawsuit-ai-platform-illegally-recorded-patient-clinician-conversations/), [The HIPAA E-Tool: HCIactive](https://thehipaaetool.com/data-breach-at-ai-powered-hciactive-soars/), [Medical Economics: Netskope healthcare report](https://www.medicaleconomics.com/view/health-care-workers-are-leaking-patient-data-through-ai-tools-cloud-apps) and [HIPAA Journal: March 2026 breach report](https://www.hipaajournal.com/march-2026-healthcare-data-breach-report/)
+- [Stripe: idempotent requests](https://docs.stripe.com/api/idempotent_requests)
 - [How to export Cinema 4D to GLB](https://svilenkovic.com/3d/how-to-export-cinema4d-to-glb)
 - Measurements and parser output: game11ty files, the [live site](https://persephonepunch.github.io/game11ty/) and the CLO jacket and avatar GLBs, 3 October 2026
