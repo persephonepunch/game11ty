@@ -6,7 +6,7 @@ scope: "How descriptions and rights travel with media files, from alt text to XM
 markdownUrl: "/docs/alt-xmp-favicons.md"
 sourceUrl: "https://github.com/persephonepunch/game11ty/blob/main/src/pages/article.md"
 pdfUrl: "/docs/alt-xmp-favicons.pdf"
-pdfSize: "2.1 MB"
+pdfSize: "2.2 MB"
 boardPdfUrl: "/docs/gamestreaming-xmpdata.pdf"
 updated: "2026-10-05"
 ogImage: "/docs/og-mediaxmp.jpg"
@@ -561,6 +561,106 @@ Older governance models were written for people signing in and for nightly or 15
 | **2. Race** | Can the same action happen twice, or two actions collide? | Every action carries an idempotency key under a unique index; check-then-act is one conditional update; Rust ownership covers races inside one program | Database constraints in Xano; Rust's compiler on devices | DH-10 to DH-14 |
 | **3. Permissions** | Is this actor allowed to do this, right now? | Claims and entitlements live in the system of record and are re-checked per request; token extras, tags and synced fields are labels, never grants; revocation is a ledger entry, effective immediately | Xano claims, consent and caps, read on every high-stakes request | DH-04, DH-17, DH-18 |
 | **4. Trust / boundary** | What may cross from one trust zone to the next? | Classify data (PII, PCI, PHI) before it moves; shape it at each boundary (browser to Worker, Worker to model, Xano to vendor, device to cloud); the model is the least trusted reader; PHI crosses only to parties with a business associate agreement | The edge Worker, mutual TLS for devices, routing by data class and region | DH-01 to DH-03, DH-05 to DH-07, DH-19 |
+
+### The egress gate: refused before any bytes leave
+
+Older pipelines checked data after it moved: logs were scanned, audits ran monthly, a leak was found and then reported. With AI agents sending data to models and vendors in seconds, that order is too late. The new rule inverts it: **evaluate the bytes before they cross the trust boundary, and if the answer is no, nothing crosses and the refusal is recorded.**
+
+<figure class="gate-fig">
+<svg viewBox="0 0 960 480" role="img" aria-label="An agent's request is held at the edge Worker, classified and evaluated against live claims, consent and the BAA registry in Xano. If allowed, shaped bytes cross the trust boundary to the model or vendor. If refused, zero bytes cross, a refusal is appended to the Xano ledger, and tests assert both." style="max-width:100%;height:auto;font-family:inherit">
+<defs>
+<marker id="ga" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker>
+<marker id="gr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="#d0453a"/></marker>
+<marker id="gt" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="#1f8a84"/></marker>
+</defs>
+<g fill="none" stroke="currentColor" stroke-width="1.5">
+<rect x="20" y="30" width="210" height="46" rx="4" stroke-dasharray="5 4" opacity=".7"/>
+<rect x="770" y="30" width="170" height="46" rx="4" stroke-dasharray="5 4" opacity=".7"/>
+<rect x="20" y="392" width="230" height="56" rx="4" stroke-dasharray="5 4" opacity=".7"/>
+<rect x="20" y="170" width="120" height="60" rx="4"/>
+<rect x="170" y="120" width="570" height="222" rx="6" opacity=".55"/>
+<rect x="190" y="170" width="100" height="60" rx="4"/>
+<rect x="315" y="170" width="100" height="60" rx="4"/>
+<rect x="440" y="170" width="100" height="60" rx="4"/>
+<polygon points="565,200 610,168 655,200 610,232"/>
+<rect x="800" y="170" width="140" height="60" rx="4"/>
+<rect x="380" y="392" width="330" height="56" rx="4"/>
+</g>
+<rect x="565" y="280" width="90" height="36" rx="4" fill="none" stroke="#d0453a" stroke-width="2"/>
+<line x1="760" y1="96" x2="760" y2="370" stroke="currentColor" stroke-width="2" stroke-dasharray="8 5"/>
+<g fill="currentColor" font-size="13" text-anchor="middle">
+<text x="125" y="58">Test: canary payload, tagged phi</text>
+<text x="855" y="51" font-weight="600">Network capture</text>
+<text x="855" y="67" font-size="11">asserts 0 bytes to vendor</text>
+<text x="135" y="415" font-weight="600">Test reads the ledger</text>
+<text x="135" y="433" font-size="11">one refusal row, reason set</text>
+<text x="80" y="197" font-weight="600">Agent or app</text>
+<text x="80" y="214" font-size="11">wants to send</text>
+<text x="240" y="196" font-weight="600">1 Hold</text>
+<text x="240" y="213" font-size="11">nothing streams</text>
+<text x="365" y="196" font-weight="600">2 Classify</text>
+<text x="365" y="213" font-size="11">tags + scan</text>
+<text x="490" y="196" font-weight="600">3 Evaluate</text>
+<text x="490" y="213" font-size="11">policy per class</text>
+<text x="610" y="204" font-weight="600">4 Allow?</text>
+<text x="870" y="196" font-weight="600">Model or vendor</text>
+<text x="870" y="213" font-size="11">outside your control</text>
+<text x="545" y="415" font-weight="600">Xano: system of record</text>
+<text x="545" y="433" font-size="11">claims · consent · BAA registry · ledger</text>
+<text x="760" y="88" font-weight="600">Trust boundary</text>
+<text x="610" y="303" fill="#d0453a" font-weight="600">Refused</text>
+</g>
+<text x="182" y="142" font-size="12" font-weight="600" fill="currentColor" opacity=".8">Edge Worker: egress gate (inside your systems)</text>
+<g stroke="currentColor" stroke-width="1.5" fill="none">
+<line x1="140" y1="200" x2="188" y2="200" marker-end="url(#ga)"/>
+<line x1="290" y1="200" x2="313" y2="200" marker-end="url(#ga)"/>
+<line x1="415" y1="200" x2="438" y2="200" marker-end="url(#ga)"/>
+<line x1="540" y1="200" x2="563" y2="200" marker-end="url(#ga)"/>
+<line x1="490" y1="390" x2="490" y2="232" marker-end="url(#ga)"/>
+<g stroke-dasharray="5 4" opacity=".7">
+<line x1="80" y1="76" x2="80" y2="168" marker-end="url(#ga)"/>
+<line x1="870" y1="76" x2="870" y2="168" marker-end="url(#ga)"/>
+<line x1="250" y1="420" x2="378" y2="420" marker-end="url(#ga)"/>
+</g>
+</g>
+<line x1="655" y1="200" x2="798" y2="200" stroke="#1f8a84" stroke-width="2.5" marker-end="url(#gt)"/>
+<line x1="610" y1="232" x2="610" y2="278" stroke="#d0453a" stroke-width="2" marker-end="url(#gr)"/>
+<line x1="610" y1="316" x2="610" y2="390" stroke="#d0453a" stroke-width="2" marker-end="url(#gr)"/>
+<line x1="655" y1="298" x2="744" y2="298" stroke="#d0453a" stroke-width="2" stroke-dasharray="4 4"/>
+<path d="M751,291l14,14M765,291l-14,14" stroke="#d0453a" stroke-width="2.5"/>
+<g font-size="11" fill="currentColor">
+<text x="164" y="190" text-anchor="middle">request</text>
+<text x="482" y="320" text-anchor="end">reads live claim,</text>
+<text x="482" y="334" text-anchor="end">consent, BAA</text>
+<text x="88" y="128">sends</text>
+<text x="878" y="128">watches egress</text>
+<text x="314" y="412" text-anchor="middle">reads</text>
+<text x="704" y="188" text-anchor="middle" fill="#1f8a84" font-weight="600">yes: shaped bytes</text>
+<text x="618" y="252" fill="#d0453a">no</text>
+<text x="618" y="360" fill="#d0453a">appends refusal</text>
+<text x="700" y="322" text-anchor="middle" fill="#d0453a" font-weight="600">0 bytes cross</text>
+</g>
+<g font-size="11" fill="currentColor">
+<line x1="20" y1="468" x2="50" y2="468" stroke="currentColor" stroke-width="1.5" stroke-dasharray="5 4" opacity=".7"/>
+<text x="58" y="472">test probe</text>
+<line x1="150" y1="468" x2="180" y2="468" stroke="#1f8a84" stroke-width="2.5"/>
+<text x="188" y="472">allowed path</text>
+<line x1="290" y1="468" x2="320" y2="468" stroke="#d0453a" stroke-width="2"/>
+<text x="328" y="472">refusal path</text>
+</g>
+</svg>
+<figcaption>The egress gate. Bytes are held at the edge, classified and evaluated against live records in Xano before anything crosses the trust boundary. A refusal sends zero bytes and leaves a ledger entry; the dashed probes are the tests that prove both.</figcaption>
+</figure>
+
+| Step | What happens to the bytes | What it checks |
+| --- | --- | --- |
+| **1. Hold** | The request body is buffered at the Worker; nothing is streamed onward yet | Size limits; the real type from magic bytes, not the name or header |
+| **2. Classify** | Each field's data class comes from its tag; free text is scanned for PII patterns and canary values | Untagged fields count as the most sensitive class until tagged |
+| **3. Evaluate** | The destination, data class, region and actor are checked against live records | A business associate agreement on file for PHI; consent and claim active; residency allowed; data fresh enough |
+| **4. Decide** | Allowed: the payload is shaped (IDs and derived facts) and sent. Refused: the buffer is dropped | — |
+| **5. Record** | Either way, a ledger entry: idempotency key, actor, destination, data class, decision, reason, ISO 8601 UTC time | The refusal itself is evidence, queryable like any other action |
+
+**How it's tested.** Test DH-03 sends a canary payload tagged `phi` toward a destination with no agreement on file and asserts two things: the network capture shows **zero bytes** reached the destination, and the ledger holds **one refusal row** with its reason. In a browser, Playwright's request listener plays the network-capture role. A test that only checks the response code would miss a gate that refuses *after* sending.
 
 The subsections that follow work through each priority: real time and race from data races through testing, permissions in [claims and entitlements](#permissions-claims-and-entitlements-not-token-extras), and trust and boundaries in [where each class may live](#pii-pci-and-phi-where-each-class-may-live) and [AI-shaped infrastructure](#ai-shaped-infrastructure). The test IDs refer to the [data hygiene test requirements](/docs/data-hygiene-tests.md): 20 Given / When / Then tests, one per rule.
 
