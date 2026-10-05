@@ -1,0 +1,26 @@
+{
+  // SB-23 egress gate, wired for local development: `npm run dev:stubs` in one
+  // terminal, `npm run dev` in another. LEDGER and CLAIMS bind to the local
+  // stand-ins, and the destinations are the stand-ins' fake vendor. Before any
+  // deploy, point these at Xano and real vendors.
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "game11ty-egress",
+  "main": "egress.mjs",
+  "compatibility_date": "2026-07-30",
+  "services": [
+    { "binding": "LEDGER", "service": "game11ty-egress-stubs" },
+    { "binding": "CLAIMS", "service": "game11ty-egress-stubs" }
+  ],
+  "vars": {
+    "POLICY": {
+      "maxBytes": 65536,
+      "tags": { "sku": "none", "ink_low": "none", "note": "none", "email": "pii", "reading": "phi" },
+      "destinations": {
+        // A model vendor with no business associate agreement.
+        "localhost:8790": { "allows": ["none", "pii"], "baa": false, "regions": ["US"] },
+        // The same stand-in under another host name, playing a vendor with a BAA on file.
+        "127.0.0.1:8790": { "allows": ["none", "pii", "phi"], "baa": true, "regions": ["US"] }
+      }
+    }
+  }
+}

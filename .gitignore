@@ -6,3 +6,4 @@ __pycache__/
 scan-report.json
 report/scan-report.json
 target/
+.wrangler/

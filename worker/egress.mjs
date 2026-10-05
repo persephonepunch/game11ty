@@ -68,7 +68,8 @@ const reply = (status, body) => Response.json(body, { status })
 export default {
   async fetch(request, env) {
     if (request.method !== "POST") return reply(405, { decision: "refused", reason: "method", bytes_sent: 0 })
-    const policy = JSON.parse(env.POLICY)
+    // A JSON string in tests; an object when wrangler.jsonc sets it as a var.
+    const policy = typeof env.POLICY === "string" ? JSON.parse(env.POLICY) : env.POLICY
 
     // 1. Hold: the whole body is buffered here; nothing streams onward.
     const raw = new Uint8Array(await request.arrayBuffer())

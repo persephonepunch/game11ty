@@ -4,7 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "dev": "wrangler dev --port 8787",
+    "dev:stubs": "wrangler dev -c stubs/wrangler.jsonc --port 8790",
+    "demo": "node demo.mjs"
   },
   "keywords": [],
   "author": "",
@@ -12,7 +15,8 @@
   "type": "module",
   "private": "true",
   "devDependencies": {
-    "miniflare": "^4.20260730.0"
+    "miniflare": "^4.20260730.0",
+    "wrangler": "^4.147.0"
   },
   "overrides": {
     "undici": "7.29.1",

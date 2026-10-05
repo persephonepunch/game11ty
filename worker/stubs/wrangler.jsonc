@@ -1,0 +1,8 @@
+{
+  // Local stand-ins for the egress gate's ledger, claims check and a vendor.
+  // For `npm run dev:stubs` only; never deploy this.
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "game11ty-egress-stubs",
+  "main": "stubs.mjs",
+  "compatibility_date": "2026-07-30"
+}
