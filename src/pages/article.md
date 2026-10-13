@@ -24,6 +24,8 @@ This article explains each layer, the Adobe XMP standard behind embedded metadat
 
 **Companion article:** [Asset Management, Security and AI](https://www.crm-sync.dev/pages/knowledge-base#what-survives-the-transform) on the CRM Sync knowledge base — the media manager's view of the same pipeline: what a re-encode destroys and what it protects, raster and mesh compression including Draco and KTX2, and where media should live.
 
+**Related:** [Machine Code/Rust/WASM, SVG/Native, Server/Client](/machine-code-rust-wasm/) — what encoding, compiling, sandboxes, TLS and containers each protect, with a 31-gap checklist.
+
 **Live sites:** [Webflow design](https://omen-valorant.webflow.io/) · [Eleventy build on GitHub Pages](https://persephonepunch.github.io/game11ty/) · [valorant.crm-sync.dev](https://valorant.crm-sync.dev/) (invite-only preview)
 
 **Challenge:** browser tests and EDI used to be enough. A browser test showed the page worked, and an EDI batch moved the order to SAP within 15 minutes. Now AI agents read, decide and act on the same data in seconds, retry on their own and repeat themselves. Testing and evaluation have to change too: test the data as well as the code, prove where regulated values go, and escalate high-stakes changes to a human. See [Testing the pipeline](#testing-the-pipeline-data-code-and-agents).

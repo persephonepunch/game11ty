@@ -8,7 +8,7 @@
 <meta property="og:type" content="article">
 <meta property="og:title" content="{{ title }}">
 <meta property="og:description" content="{{ description }}">
-<meta property="og:url" content="{{ site.url }}/article/">
+<meta property="og:url" content="{{ site.url }}{{ page.url }}">
 <meta property="og:image" content="{{ site.url }}{{ ogImage }}">
 <meta property="og:image:type" content="image/jpeg">
 <meta property="og:image:width" content="1200">
@@ -18,7 +18,7 @@
 <meta name="twitter:image" content="{{ site.url }}{{ ogImage }}">
 <meta name="twitter:image:alt" content="{{ ogImageAlt }}">
 <link href="/favicon.ico" rel="icon" sizes="16x16 32x32 48x48">
-<script type="application/ld+json">{{ { "@context": "https://schema.org", "@type": "TechArticle", "headline": title, "description": description, "url": site.url + "/article/", "dateModified": updated, "image": { "@type": "ImageObject", "url": site.url + ogImage, "width": 1200, "height": 630, "description": ogImageAlt }, "encoding": [{ "@type": "MediaObject", "encodingFormat": "application/pdf", "contentUrl": site.url + pdfUrl }, { "@type": "MediaObject", "encodingFormat": "text/markdown", "contentUrl": site.url + markdownUrl }] } | dump | safe }}</script>
+{% if pdfUrl %}<script type="application/ld+json">{{ { "@context": "https://schema.org", "@type": "TechArticle", "headline": title, "description": description, "url": site.url + page.url, "dateModified": updated, "image": { "@type": "ImageObject", "url": site.url + ogImage, "width": 1200, "height": 630, "description": ogImageAlt }, "encoding": [{ "@type": "MediaObject", "encodingFormat": "application/pdf", "contentUrl": site.url + pdfUrl }, { "@type": "MediaObject", "encodingFormat": "text/markdown", "contentUrl": site.url + markdownUrl }] } | dump | safe }}</script>{% else %}<script type="application/ld+json">{{ { "@context": "https://schema.org", "@type": "TechArticle", "headline": title, "description": description, "url": site.url + page.url, "dateModified": updated, "image": { "@type": "ImageObject", "url": site.url + ogImage, "width": 1200, "height": 630, "description": ogImageAlt }, "encoding": [{ "@type": "MediaObject", "encodingFormat": "text/markdown", "contentUrl": site.url + markdownUrl }] } | dump | safe }}</script>{% endif %}
 <!-- CRM Sync reference-doc design system (one canonical source) -->
 <link rel="stylesheet" href="https://persephonepunch.github.io/crm-sync-setup/doc.css">
 <style>
@@ -63,7 +63,7 @@
   <a href="/">&larr; game11ty</a>
   <a href="/rights/">Rights</a>
   <span class="spacer"></span>
-  <a class="dl" href="{{ pdfUrl }}" download><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-5-5m5 5l5-5M5 21h14"/></svg>PDF</a>
+  {% if pdfUrl %}<a class="dl" href="{{ pdfUrl }}" download><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-5-5m5 5l5-5M5 21h14"/></svg>PDF</a>{% endif %}
   <a class="dl" href="{{ markdownUrl }}" download><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="1"/><path d="M7 15V9l2.5 3L12 9v6M17 9v6m0 0l-2-2m2 2l2-2"/></svg>Markdown</a>
   <a href="{{ sourceUrl }}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M9 19c-4 1.5-4-2-6-2.5m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12 12 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg>Source</a>
 </div></nav>
@@ -72,7 +72,7 @@
     <p class="label">Contents</p>
     <!--kb-toc-->
     <div class="files">
-      <a href="{{ pdfUrl }}" download>Download the PDF</a>
+      {% if pdfUrl %}<a href="{{ pdfUrl }}" download>Download the PDF</a>{% endif %}
       <a href="{{ markdownUrl }}" download>Markdown</a>
       <a href="{{ sourceUrl }}" target="_blank" rel="noopener">Source on GitHub</a>
     </div>
@@ -83,12 +83,12 @@
       <h1>{{ title }}</h1>
       <figure class="hero-fig">
         <a href="{{ heroImage }}"><img src="{{ heroImage }}" width="1600" height="900" alt="{{ ogImageAlt }}" fetchpriority="high"></a>
-        <figcaption>The build board behind this article. <a href="{{ boardPdfUrl }}" download>Download the full-resolution PDF</a>.</figcaption>
+        <figcaption>{% if heroCaption %}{{ heroCaption | safe }}{% else %}The build board behind this article. <a href="{{ boardPdfUrl }}" download>Download the full-resolution PDF</a>.{% endif %}</figcaption>
       </figure>
       <p class="sub summary"><b>Summary.</b> {{ summary }}</p>
       <div class="meta"><span>Status: <b>{{ status }}</b></span></div>
       <div class="meta"><span>Scope: <b>{{ scope }}</b></span></div>
-      <div class="meta"><span>Updated <b>{{ updated }}</b></span><span><a href="{{ pdfUrl }}" download>Download the PDF</a> ({{ pdfSize }})</span><span><a href="{{ markdownUrl }}" download>Markdown</a></span><span><a href="{{ sourceUrl }}" target="_blank" rel="noopener">GitHub source</a></span></div>
+      <div class="meta"><span>Updated <b>{{ updated }}</b></span>{% if pdfUrl %}<span><a href="{{ pdfUrl }}" download>Download the PDF</a> ({{ pdfSize }})</span>{% endif %}<span><a href="{{ markdownUrl }}" download>Markdown</a></span><span><a href="{{ sourceUrl }}" target="_blank" rel="noopener">GitHub source</a></span></div>
     </header>
     <article class="doc">
 {{ content | safe }}

