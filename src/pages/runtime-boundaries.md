@@ -26,6 +26,11 @@ The title pairs the ideas this article compares:
 
 **Diagram:** [Open the full SVG](/docs/svg-base64-security-gaps.svg) (1600 × 4290) · [JPG](/docs/svg-base64-security-gaps.jpg). Numbers in the dashed circles match the gap list at the end.
 
+<figure class="gate-fig">
+  <a href="/docs/svg-base64-security-gaps.svg"><img src="/docs/svg-base64-security-gaps.svg" width="1600" height="4290" loading="lazy" style="display:block;width:100%;height:auto;border:1px solid var(--g3);background:#fff" alt="The full diagram, top to bottom: one SVG with a hidden script and patient metadata, the same file as a base64 data URI, and the three ways a page can display it; definitions of base64, compile, machine code and bare metal; what each layer checks and misses from browser and Elm through TLS, Cloudflare, Xano and a Rust service; TLS hops in Next.js hydration and a CRM-to-Shopify data bus; JVM, iPaaS and Wasm stacks compared on isolation, network access, memory safety, supply chain, patching, Consent Mode v2 and idempotency; VM, Docker and Kubernetes isolation and transport; and 31 numbered security gaps, each with a fix."></a>
+  <figcaption>The full diagram, displayed with &lt;img&gt; so its SVG can't run code on this page (gap 3). <a href="/docs/svg-base64-security-gaps.svg">Open the SVG</a> · <a href="/docs/svg-base64-security-gaps.jpg">JPG</a>.</figcaption>
+</figure>
+
 **Companion article:** [ALT, XMP and Favicons](/article/), on how descriptions and rights travel inside media files.
 
 ## Four words that get confused
