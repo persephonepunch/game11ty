@@ -7,8 +7,6 @@ markdownUrl: "/docs/machine-code-rust-wasm.md"
 sourceUrl: "https://github.com/persephonepunch/game11ty/blob/main/src/pages/runtime-boundaries.md"
 updated: "2026-10-13"
 ogImage: "/docs/og-runtime-boundaries.jpg"
-heroImage: "/docs/runtime-boundaries-hero.jpg"
-heroCaption: "Top of the diagram. <a href=\"/docs/svg-base64-security-gaps.svg\">Open the full SVG</a> · <a href=\"/docs/svg-base64-security-gaps.jpg\">JPG</a>."
 summary: "Base64, a Rust compile, a Wasm sandbox, TLS and a container each protect one thing, and people assume they protect more. This reference pairs them up: machine code, Rust and Wasm (what actually runs), SVG and native code (a document that can act like a program), and server and client (where a rule is really enforced). It ends with 31 gaps and the control that closes each."
 ogImageAlt: "Diagram: one SVG traveling as base64 and the three ways it can be displayed, four definitions (base64, compile, machine code, bare metal), what each layer checks from browser to Rust service, and TLS hops in Next.js hydration and a CRM to Shopify data bus"
 permalink: "/machine-code-rust-wasm/"
@@ -24,12 +22,7 @@ The title pairs the ideas this article compares:
 - **SVG / Native:** an SVG is a document that can behave like a program; native code is a program with no document to hide behind.
 - **Server / Client:** where a rule is really enforced, and where it's only a suggestion.
 
-**Diagram:** [Open the full SVG](/docs/svg-base64-security-gaps.svg) (1600 × 4290) · [JPG](/docs/svg-base64-security-gaps.jpg). Numbers in the dashed circles match the gap list at the end.
-
-<figure class="gate-fig">
-  <a href="/docs/svg-base64-security-gaps.svg"><img src="/docs/svg-base64-security-gaps.svg" width="1600" height="4290" loading="lazy" style="display:block;width:100%;height:auto;border:1px solid var(--g3);background:#fff" alt="The full diagram, top to bottom: one SVG with a hidden script and patient metadata, the same file as a base64 data URI, and the three ways a page can display it; definitions of base64, compile, machine code and bare metal; what each layer checks and misses from browser and Elm through TLS, Cloudflare, Xano and a Rust service; TLS hops in Next.js hydration and a CRM-to-Shopify data bus; JVM, iPaaS and Wasm stacks compared on isolation, network access, memory safety, supply chain, patching, Consent Mode v2 and idempotency; VM, Docker and Kubernetes isolation and transport; and 31 numbered security gaps, each with a fix."></a>
-  <figcaption>The full diagram, displayed with &lt;img&gt; so its SVG can't run code on this page (gap 3). <a href="/docs/svg-base64-security-gaps.svg">Open the SVG</a> · <a href="/docs/svg-base64-security-gaps.jpg">JPG</a>.</figcaption>
-</figure>
+**Diagram:** [SVG/Rust/Elm: The Security Gaps Illustration](/svg-rust-elm/) shows everything in this article on one page, with an index of where each numbered gap appears. The gap numbers below match it.
 
 **Companion article:** [ALT, XMP and Favicons](/article/), on how descriptions and rights travel inside media files.
 

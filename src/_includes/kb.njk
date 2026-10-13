@@ -82,10 +82,10 @@
     <header class="hero">
       <span class="kicker">{{ kicker }}</span>
       <h1>{{ title }}</h1>
-      <figure class="hero-fig">
+      {% if heroImage %}      <figure class="hero-fig">
         <a href="{{ heroImage }}"><img src="{{ heroImage }}" width="1600" height="900" alt="{{ ogImageAlt }}" fetchpriority="high"></a>
         <figcaption>{% if heroCaption %}{{ heroCaption | safe }}{% else %}The build board behind this article. <a href="{{ boardPdfUrl }}" download>Download the full-resolution PDF</a>.{% endif %}</figcaption>
-      </figure>
+      </figure>{% endif %}
       <p class="sub summary"><b>Summary.</b> {{ summary }}</p>
       <div class="meta"><span>Status: <b>{{ status }}</b></span></div>
       <div class="meta"><span>Scope: <b>{{ scope }}</b></span></div>
