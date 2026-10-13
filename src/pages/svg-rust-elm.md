@@ -4,6 +4,8 @@ kicker: "Illustration"
 status: "Living reference · Diagram and gap index"
 scope: "One page that maps SVG, base64, Rust, Elm, TLS, runtimes and containers to the 31 security gaps between them."
 markdownUrl: "/docs/svg-rust-elm.md"
+pdfUrl: "/docs/svg-rust-elm-illustration.pdf"
+pdfSize: "233 KB"
 sourceUrl: "https://github.com/persephonepunch/game11ty/blob/main/src/pages/svg-rust-elm.md"
 updated: "2026-10-13"
 ogImage: "/docs/og-runtime-boundaries.jpg"
@@ -13,7 +15,7 @@ heroImage: "/docs/svg-base64-security-gaps.svg"
 heroWidth: 1600
 heroHeight: 4290
 heroAlt: "The full diagram, top to bottom: one SVG with a hidden script and patient metadata, the same file as a base64 data URI, and the three ways a page can display it; definitions of base64, compile, machine code and bare metal; what each layer checks and misses from browser and Elm through TLS, Cloudflare, Xano and a Rust service; TLS hops in Next.js hydration and a CRM-to-Shopify data bus; JVM, iPaaS and Wasm stacks compared on isolation, network access, memory safety, supply chain, patching, Consent Mode v2 and idempotency; VM, Docker and Kubernetes isolation and transport; and 31 numbered security gaps, each with a fix."
-heroCaption: "The full illustration (1600 × 4290), displayed with &lt;img&gt; so its SVG can't run code on this page (gap 3). <a href=\"/docs/svg-base64-security-gaps.svg\">Open the SVG</a> · <a href=\"/docs/svg-base64-security-gaps.jpg\">JPG</a>."
+heroCaption: "The full illustration (1600 × 4290), displayed with &lt;img&gt; so its SVG can't run code on this page (gap 3). <a href=\"/docs/svg-base64-security-gaps.svg\">Open the SVG</a> · <a href=\"/docs/svg-rust-elm-illustration.pdf\" download>Download the PDF</a> · <a href=\"/docs/svg-base64-security-gaps.jpg\">JPG</a>."
 permalink: "/svg-rust-elm/"
 title: "SVG/Rust/Elm: The Security Gaps Illustration"
 description: "A one-page diagram of where SVG, base64, Rust, Elm, TLS, JVM, iPaaS and Wasm runtimes, VMs and containers leave PII, PCI and PHI data exposed, with an index of 31 gaps."
@@ -107,6 +109,7 @@ Where each numbered circle appears in the diagram. Fixes are in the [companion a
 ## The files
 
 - **SVG:** [svg-base64-security-gaps.svg](/docs/svg-base64-security-gaps.svg), 1600 × 4290, with a `<title>` and `<desc>` for screen readers and search. Text uses Helvetica and Courier, and the labels avoid arrow characters so they display in any app.
+- **PDF:** [svg-rust-elm-illustration.pdf](/docs/svg-rust-elm-illustration.pdf) (233 KB), the whole diagram on one vector page, with selectable text, for printing or sharing.
 - **JPG:** [svg-base64-security-gaps.jpg](/docs/svg-base64-security-gaps.jpg), carrying the same rights XMP and alt text as every image on this site (see [ALT, XMP and Favicons](/article/)).
 - **Rights:** see the [rights page](/rights/).
 
