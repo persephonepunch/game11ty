@@ -8,7 +8,7 @@ sourceUrl: "https://github.com/persephonepunch/game11ty/blob/main/src/pages/arti
 pdfUrl: "/docs/alt-xmp-favicons.pdf"
 pdfSize: "2.2 MB"
 boardPdfUrl: "/docs/gamestreaming-xmpdata.pdf"
-updated: "2026-10-05"
+updated: "2026-10-13"
 ogImage: "/docs/og-mediaxmp.jpg"
 heroImage: "/docs/mediaxmp-board.jpg"
 summary: "Machines decide what an image shows, and who owns it, from three sources: the page's alt text, the XMP inside the file, and JSON-LD. This reference shows how to keep all three in agreement across JPG, PNG and WebP, favicons, 3D glTF models and video, and where exporters, encoders and compression break them. It's built on measurements from the game11ty site and the CLO jacket models, with Python and exiftool commands you can run yourself."
@@ -23,6 +23,8 @@ Search engines, asset managers and AI models decide what an image shows, and who
 This article explains each layer, the Adobe XMP standard behind embedded metadata, how it's stored in JPG, PNG and WebP, and how rights fields act as a lightweight form of DRM. It ends with a worked example, the game11ty site, and a checklist for agencies and media teams.
 
 **Companion article:** [Asset Management, Security and AI](https://www.crm-sync.dev/pages/knowledge-base#what-survives-the-transform) on the CRM Sync knowledge base — the media manager's view of the same pipeline: what a re-encode destroys and what it protects, raster and mesh compression including Draco and KTX2, and where media should live.
+
+**Live sites:** [Webflow design](https://omen-valorant.webflow.io/) · [Eleventy build on GitHub Pages](https://persephonepunch.github.io/game11ty/) · [valorant.crm-sync.dev](https://valorant.crm-sync.dev/) (invite-only preview)
 
 **Challenge:** browser tests and EDI used to be enough. A browser test showed the page worked, and an EDI batch moved the order to SAP within 15 minutes. Now AI agents read, decide and act on the same data in seconds, retry on their own and repeat themselves. Testing and evaluation have to change too: test the data as well as the code, prove where regulated values go, and escalate high-stakes changes to a human. See [Testing the pipeline](#testing-the-pipeline-data-code-and-agents).
 
@@ -989,6 +991,8 @@ A favicon is the most widely copied image a site has. It appears in tabs, bookma
 ## Case study: game11ty
 
 [game11ty](https://persephonepunch.github.io/game11ty/) is a one-page OMEN x Valorant site designed in Webflow, converted to static Eleventy pages by a Python script, and published on GitHub Pages. It was built on 3 October 2026, and the alt text, XMP and favicon work all happened that day.
+
+**See it live:** [Webflow design](https://omen-valorant.webflow.io/) · [Eleventy build on GitHub Pages](https://persephonepunch.github.io/game11ty/) · [valorant.crm-sync.dev](https://valorant.crm-sync.dev/) (invite-only preview)
 
 ![Pipeline diagram: the Webflow site feeds sync.py, which feeds postsync.py; images.json feeds postsync.py; postsync.py feeds the Eleventy build, which deploys to GitHub Pages](/docs/pipeline-diagram.png)
 
