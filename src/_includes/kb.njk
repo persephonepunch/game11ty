@@ -83,7 +83,7 @@
       <span class="kicker">{{ kicker }}</span>
       <h1>{{ title }}</h1>
       {% if heroImage %}      <figure class="hero-fig">
-        <a href="{{ heroImage }}"><img src="{{ heroImage }}" width="1600" height="900" alt="{{ ogImageAlt }}" fetchpriority="high"></a>
+        <a href="{{ heroImage }}"><img src="{{ heroImage }}" width="{{ heroWidth or 1600 }}" height="{{ heroHeight or 900 }}" alt="{{ heroAlt or ogImageAlt }}" fetchpriority="high"></a>
         <figcaption>{% if heroCaption %}{{ heroCaption | safe }}{% else %}The build board behind this article. <a href="{{ boardPdfUrl }}" download>Download the full-resolution PDF</a>.{% endif %}</figcaption>
       </figure>{% endif %}
       <p class="sub summary"><b>Summary.</b> {{ summary }}</p>

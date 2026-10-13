@@ -9,6 +9,11 @@ updated: "2026-10-13"
 ogImage: "/docs/og-runtime-boundaries.jpg"
 summary: "A single diagram that follows one SVG file from source to base64 to the browser, then through an Elm client, TLS, Cloudflare, Xano and a Rust service, two TLS pipelines, three integration stacks and three kinds of isolation. Dashed lines mark the gaps, and each numbered circle points to one of 31 gaps. This page shows the diagram, explains how to read it and indexes where every gap appears."
 ogImageAlt: "Diagram: one SVG traveling as base64 and the three ways it can be displayed, four definitions (base64, compile, machine code, bare metal), what each layer checks from browser to Rust service, and TLS hops in Next.js hydration and a CRM to Shopify data bus"
+heroImage: "/docs/svg-base64-security-gaps.svg"
+heroWidth: 1600
+heroHeight: 4290
+heroAlt: "The full diagram, top to bottom: one SVG with a hidden script and patient metadata, the same file as a base64 data URI, and the three ways a page can display it; definitions of base64, compile, machine code and bare metal; what each layer checks and misses from browser and Elm through TLS, Cloudflare, Xano and a Rust service; TLS hops in Next.js hydration and a CRM-to-Shopify data bus; JVM, iPaaS and Wasm stacks compared on isolation, network access, memory safety, supply chain, patching, Consent Mode v2 and idempotency; VM, Docker and Kubernetes isolation and transport; and 31 numbered security gaps, each with a fix."
+heroCaption: "The full illustration (1600 × 4290), displayed with &lt;img&gt; so its SVG can't run code on this page (gap 3). <a href=\"/docs/svg-base64-security-gaps.svg\">Open the SVG</a> · <a href=\"/docs/svg-base64-security-gaps.jpg\">JPG</a>."
 permalink: "/svg-rust-elm/"
 title: "SVG/Rust/Elm: The Security Gaps Illustration"
 description: "A one-page diagram of where SVG, base64, Rust, Elm, TLS, JVM, iPaaS and Wasm runtimes, VMs and containers leave PII, PCI and PHI data exposed, with an index of 31 gaps."
@@ -17,11 +22,6 @@ templateEngineOverride: md
 This illustration puts a whole data path on one page: one SVG file, the client that displays it, every server it passes through, and the runtimes and containers underneath. It is built to answer one question at each step: **who can read the data here?**
 
 The reasoning behind each box, and the fix for every gap, is in the companion article, [Machine Code/Rust/WASM, SVG/Native, Server/Client](/machine-code-rust-wasm/).
-
-<figure class="gate-fig">
-  <a href="/docs/svg-base64-security-gaps.svg"><img src="/docs/svg-base64-security-gaps.svg" width="1600" height="4290" loading="lazy" style="display:block;width:100%;height:auto;border:1px solid var(--g3);background:#fff" alt="The full diagram, top to bottom: one SVG with a hidden script and patient metadata, the same file as a base64 data URI, and the three ways a page can display it; definitions of base64, compile, machine code and bare metal; what each layer checks and misses from browser and Elm through TLS, Cloudflare, Xano and a Rust service; TLS hops in Next.js hydration and a CRM-to-Shopify data bus; JVM, iPaaS and Wasm stacks compared on isolation, network access, memory safety, supply chain, patching, Consent Mode v2 and idempotency; VM, Docker and Kubernetes isolation and transport; and 31 numbered security gaps, each with a fix."></a>
-  <figcaption>The full illustration (1600 × 4290), displayed with &lt;img&gt; so its SVG can't run code on this page (gap 3). <a href="/docs/svg-base64-security-gaps.svg">Open the SVG</a> · <a href="/docs/svg-base64-security-gaps.jpg">JPG</a>.</figcaption>
-</figure>
 
 ## How to read it
 
