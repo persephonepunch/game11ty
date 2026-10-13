@@ -16,6 +16,11 @@ ogImageAlt: "Build board for the article: screenshots of the game11ty GitHub rep
 permalink: "/article/"
 title: "ALT, XMP and Favicons: Image Metadata for Rights and Media Management"
 description: "How alt text, embedded XMP and favicons carry descriptions and rights for search engines, DAMs and AI models, with JPG, PNG, WebP, glTF and Draco examples."
+topLinks:
+  - label: "Game site"
+    url: "https://persephonepunch.github.io/game11ty/"
+  - label: "Webflow design"
+    url: "https://omen-valorant.webflow.io/"
 templateEngineOverride: md
 ---
 Search engines, asset managers and AI models decide what an image shows, and who controls it, from text: the `alt` attribute, the metadata inside the file, and structured data on the page. When those three agree, a machine doesn't have to guess. When they're missing or contradict each other, it guesses, and the guess travels with the image into indexes, datasets and model outputs.
